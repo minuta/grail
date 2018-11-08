@@ -52,4 +52,8 @@ def build(bld):
     if bld.env.ENABLE_EXAMPLES:
         bld.recurse('examples')
 
+
+    bld.recurse('multi-threading')
+
+
     # bld.ns3_python_bindings()
