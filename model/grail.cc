@@ -341,6 +341,12 @@ struct GrailApplication::Priv
       FAKE2(egid);
       break;
 
+
+    // pthread system calls
+    case SYS_clone:
+      res = HandleClone();
+      break;
+
     default:
       NS_LOG_ERROR(pid << ": [EE] unsupported system call: " << syscname(syscall));
       exit(1);
@@ -2058,6 +2064,29 @@ struct GrailApplication::Priv
     FAKE(buflen);
     return SYSC_SUCCESS;
   }
+
+
+  // long clone(unsigned long flags, void *child_stack, int *ptid, int *ctid, unsigned long newtls);
+  SyscallHandlerStatusCode HandleClone(){
+
+    void *child_stack;
+    unsigned long flags;
+    int *ptid;
+    unsigned long *newtls;
+    int *ctid;
+
+    read_args (pid, flags, child_stack, ptid, ctid, newtls);            // raw call
+
+    // unsigned long rdi_value = get_reg(pid, rdi);
+
+    flags |= CLONE_PTRACE;     // new processes (threads) should be traced too
+    set_reg(pid, rdi, flags);
+
+    return HandleSyscallAfter();
+    //return SYSC_ERROR;
+  }
+
+
 
   Ptr<NetDevice> GetNetDeviceByName(const std::string& ifname) {
     std::regex wlan_regex("^wlan");
