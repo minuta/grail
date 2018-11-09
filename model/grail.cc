@@ -2186,11 +2186,11 @@ bool fileExists(const std::string &file){
 
 void GrailApplication::Setup(const std::vector<std::string>& args)
 {
-  const std::string FILE_PATH {args[0]};
-  const std::string PATH_ERROR_MSG {"Application " + FILE_PATH + " not found!"};
+  std::string filePath {args[0]};
+  std::string notFoundErrMsg {"Application " + filePath + " not found!"};
 
-  if (!fileExists(FILE_PATH)){
-    NS_LOG_ERROR (PATH_ERROR_MSG);
+  if (!fileExists(filePath)){
+    NS_LOG_ERROR (notFoundErrMsg);
     exit (EXIT_FAILURE);
   }
   p->args = args;
