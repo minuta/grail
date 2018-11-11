@@ -106,7 +106,7 @@ GrailApplication::GetTypeId (void)
 
 struct GrailApplication::Priv
 {
-#define PNAME pid  
+  #define PNAME pid  
   pid_t pid;
   pid_t fake_pid;
   std::vector<std::string> args;
@@ -118,6 +118,8 @@ struct GrailApplication::Priv
   uint32_t egid;
   uint32_t uid;
   uint32_t euid;  
+
+  std::vector<int> tid_vector;
 
   // State to maintain for the protocol process  
   Ptr<UniformRandomVariable> rng;
@@ -472,6 +474,19 @@ struct GrailApplication::Priv
 
     return SYSC_SUCCESS;
   }
+
+  SyscallHandlerStatusCode HandleSyscallAfterClone() {
+    if (WaitForSyscall(pid) != 0) {
+      return SYSC_ERROR;
+    }
+    int retval = get_reg(pid, rax);   // thread ID
+    tid_vector.push_back(retval);     // save current TID
+    
+    NS_LOG_LOGIC(pid << ": [EE] SYSTEM syscall CLONE returned: " << retval);
+
+    return SYSC_SUCCESS;
+  }
+
 
   bool FdIsEmulatedSocket(int fd) {
 
@@ -2083,7 +2098,7 @@ struct GrailApplication::Priv
     flags |= CLONE_PTRACE;     // new processes (threads) should be traced too
     set_reg(pid, rdi, flags);
 
-    return HandleSyscallAfter();
+    return HandleSyscallAfterClone();
     //return SYSC_ERROR;
   }
 

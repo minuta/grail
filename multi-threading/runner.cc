@@ -41,7 +41,8 @@ int main (int argc, char *argv[])
   if (enableDefaultApp){
     HOME_DIR = "/home/qp/Projects/";
     //APP_TO_RUN = HOME_DIR + "bluepill_application_loader/build/scratch/trigger-sc-clone";
-    APP_TO_RUN = HOME_DIR + "syscall-trigger/time";
+    //APP_TO_RUN = HOME_DIR + "syscall-trigger/time";
+    APP_TO_RUN = HOME_DIR + "ns-3.29/build/scratch/trigger-sc-clone";
 
     appToRun = APP_TO_RUN;
     // TODO: make a method from this block

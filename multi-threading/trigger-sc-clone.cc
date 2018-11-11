@@ -23,7 +23,7 @@ int main(int argc, char const *argv[])
 
     pthread_t threads[NUM_OF_THREADS];
 
-    for(size_t i = 0; i < NUM_OF_THREADS; i++){
+    for(size_t i = 1; i < NUM_OF_THREADS+1; i++){
         std::cout << ">>> creating THREAD #" << i << std::endl;
         int threadCreateStatus = pthread_create (&threads[i], NULL, sayHi, (void *)i);
 
