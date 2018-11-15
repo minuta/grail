@@ -15,6 +15,7 @@
 #include <sys/reg.h>
 #include <sys/wait.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -2205,8 +2206,20 @@ int GrailApplication::Priv::DoTrace() {
   return 0;
 }
 
+bool fileExists(const std::string &file){
+  struct stat buf;
+  return (stat(file.c_str(), &buf)==0);
+}
+
 void GrailApplication::Setup(const std::vector<std::string>& args)
 {
+  std::string filePath {args[0]};
+  std::string notFoundErrMsg {"Application " + filePath + " not found!"};
+
+  if (!fileExists(filePath)){
+    NS_LOG_ERROR (notFoundErrMsg);
+    exit (EXIT_FAILURE);
+  }
   p->args = args;
 }
 
