@@ -96,7 +96,7 @@ GrailApplication::GetTypeId (void)
                    MakeBooleanChecker ())
     .AddAttribute ("SyscallProcessingTime",
                    "The simulated time accounted for by each system call.",
-                   TimeValue (NanoSeconds(100)),
+                   TimeValue (NanoSeconds(0)),
                    MakeTimeAccessor (&GrailApplication::m_syscallProcessingTime),
                    MakeTimeChecker ())
   ;
@@ -201,7 +201,7 @@ struct GrailApplication::Priv
     case SYS_get_robust_list:
     case SYS_arch_prctl:
 
-      // needs further research (likely requires re-implementation):
+      // needs further research (likely requires at least partial re-implementation at some point):
     case SYS_rt_sigaction:   // can block wait?
     case SYS_rt_sigprocmask: // can block wait?
     case SYS_futex:          // MT?
@@ -307,6 +307,9 @@ struct GrailApplication::Priv
       break;
     case SYS_clock_gettime:
       res = HandleClockGetTime();
+      break;
+    case SYS_clock_getres:
+      res = HandleClockGetRes();
       break;
     case SYS_bind:
       res = HandleBind();
@@ -1661,7 +1664,7 @@ struct GrailApplication::Priv
 
     if(may_block && does_block) {
       if(timeout) {
-        std::function<void()> to_cb = [this,mytimeout,timeout,already_handled]() {
+        std::function<void()> to_cb = [this,already_handled]() {
           NS_LOG_LOGIC(pid << " [" << Simulator::Now().GetSeconds() << "s] " << "select timeout");
           if(*already_handled) return;
           *already_handled = true;
@@ -1973,7 +1976,28 @@ struct GrailApplication::Priv
     return SYSC_SUCCESS;
   }
 
-    // int bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
+  // int clock_getres(clockid_t clk_id, struct timespec *res);
+  SyscallHandlerStatusCode HandleClockGetRes() {
+    clockid_t clk_id;
+    struct timespec *res;
+    read_args(pid, clk_id, res);
+    struct timespec myres;
+    // LoadFromTracee(pid, &myres, res);
+
+    // check for unspported clocks
+    if(clk_id == CLOCK_PROCESS_CPUTIME_ID || clk_id == CLOCK_THREAD_CPUTIME_ID) {
+      FAKE(-1);
+      return SYSC_FAILURE;
+    }
+
+    myres.tv_sec  =  0;
+    myres.tv_nsec = 10; // 10ns resolution seams reasonable, since ns-3 has 1ns resolution.
+    
+    StoreToTracee(pid, &myres, res);
+    return SYSC_SUCCESS;
+  }
+
+  // int bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
   SyscallHandlerStatusCode HandleBind() {
     int sockfd;
     struct sockaddr* addr;
@@ -2138,12 +2162,15 @@ void GrailApplication::StartApplication (void)
     ptrace(PTRACE_TRACEME);
     // kill(getpid(), SIGSTOP); // WARNING: fucks up valgrind for good, but enables "execve" tracing
     // todo: check that file (argv[0]) exists
-
+    int ret;
     if(!m_enablePreloading) {
-      execvp(argv[0], argv);
+      ret = execvp(argv[0], argv);
     } else {
-      char * const newenviron[] = { (char*const) "LD_PRELOAD=./novdso.so", NULL };
-      execvpe(argv[0], argv, newenviron);
+      char * const newenviron[] = { (char*const) "LD_PRELOAD=./build/src/grail/libnovdso.so", NULL };
+      ret = execvpe(argv[0], argv, newenviron);
+    }
+    if(ret < 0) {
+      exit(1);
     }
   } else {
     p->pid = child;
