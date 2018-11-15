@@ -4,3 +4,6 @@ def build(bld):
     obj = bld.create_ns3_program('grail-example', ['grail'])
     obj.source = 'grail-example.cc'
 
+    obj = bld.create_ns3_program('grail-olsr-example', ['grail','olsr','flow-monitor','applications','csma'])
+    obj.source = 'grail-olsr-example.cc'
+
