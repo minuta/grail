@@ -76,6 +76,7 @@ inline std::string syscname(int syscall) {
     CASESC(SYS_unlink);
     CASESC(SYS_ftruncate);
     CASESC(SYS_openat);
+    CASESC(SYS_clock_getres);
   }
   std::stringstream ss;
   ss << syscall;

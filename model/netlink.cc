@@ -16,7 +16,7 @@
 #include "ns3/loopback-net-device.h"
 #include "ns3/network-module.h"
 
-NS_LOG_COMPONENT_DEFINE ("SyscallWrapperNetlink");
+NS_LOG_COMPONENT_DEFINE ("GrailNetlink");
 
 // converts a BSD socket API address to an ns-3 address
 // note: does NOT read memory from tracee
@@ -48,7 +48,6 @@ std::shared_ptr<ns3::Ipv4Address> NetlinkSocket::BsdInAddr4ToNs3Address(struct i
 
   return std::make_shared<ns3::Ipv4Address>(ns3Addr);
 }
-
 
 SyscallHandlerStatusCode NetlinkSocket::HandleBind(int sockfd, struct sockaddr* addr, socklen_t addrlen)
 {
@@ -147,8 +146,8 @@ SyscallHandlerStatusCode NetlinkSocket::HandleSendMsg(int sockfd, struct msghdr 
   struct msghdr msg;
   MemcpyFromTracee(pid, &msg, message, sizeof(msghdr));
 
-  // NS_LOG_LOGIC(pid << ": [EE] [NL] msghdr: ");
-  // NS_LOG_LOGIC(pid << ": [EE] [NL] msghdr: " << msg.msg_iovlen);
+  NS_LOG_LOGIC(pid << ": [EE] [NL] msghdr for protocol " << protocol << ":");
+  NS_LOG_LOGIC(pid << ": [EE] [NL] msghdr: " << msg.msg_iovlen);
 
   size_t total_bytes = 0;
   

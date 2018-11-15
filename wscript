@@ -26,10 +26,9 @@ def configure(conf):
         conf.env['MODULES_NOT_BUILT'].append('grail-module')
 
 def build(bld):
-    bld.env.append_value('CXXFLAGS', bld.env.NL_cflags)
-    bld.env.append_value('LDFLAGS', bld.env.NL_libs)
-
     module = bld.create_ns3_module('grail', ['internet', 'wifi', 'point-to-point'])
+    module.env.append_value('CXXFLAGS', bld.env.NL_cflags)
+    module.env.append_value('LDFLAGS', bld.env.NL_libs)
     module.source = [
         'model/grail.cc',
         'model/netlink.cc',
@@ -48,6 +47,8 @@ def build(bld):
         'model/grail.h',
 #        'helper/grail-helper.h',
         ]
+
+    bld(features='c cshlib', source='novdso.c', target='novdso')
 
     if bld.env.ENABLE_EXAMPLES:
         bld.recurse('examples')
