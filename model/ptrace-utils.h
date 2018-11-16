@@ -237,7 +237,4 @@ inline int WaitForSyscall(int pid) {
   }
 }
 
-
-
-
 #endif // __PTRACE_UTILS_H__
