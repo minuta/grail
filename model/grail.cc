@@ -7,6 +7,7 @@
 #include "ptrace-utils.h"
 #include "netlink.h"
 #include "syscname.h"
+#include "poll-detector.h"
 
 #include <bits/types.h>
 #include <sys/ptrace.h>
@@ -134,6 +135,9 @@ struct GrailApplication::Priv
   // used for alarm(2)
   EventId alarmEvent;
   Time    alarmTime;
+
+  // temporary variable used for poll loop delay 
+  PollLoopDetector<SimpleGettimeofdaySelectLoopDetector, ExponentialBackoffStrategy> pollLoopDetector;
   
   int DoTrace();
   
@@ -143,11 +147,11 @@ struct GrailApplication::Priv
       // useful when calling callback directly, see e.g. HandleRecvFrom
     } else if(res == SYSC_SUCCESS) {
       NS_LOG_LOGIC(PNAME << ": [EE] [" << Simulator::Now().GetSeconds() << "s] emulated function succeeded, rr; syscall: " << syscname(syscall));
-      Simulator::Schedule(app->m_syscallProcessingTime, &Priv::HandleSyscallBefore, this);
+      Simulator::Schedule(app->m_syscallProcessingTime + pollLoopDetector.GetDelay(), &Priv::HandleSyscallBefore, this);
       return;
     } else if(res == SYSC_FAILURE) {
       NS_LOG_LOGIC(PNAME << ": [EE] emulated function failed, rr; syscall: " << syscname(syscall));
-      Simulator::Schedule(app->m_syscallProcessingTime, &Priv::HandleSyscallBefore, this);
+      Simulator::Schedule(app->m_syscallProcessingTime + pollLoopDetector.GetDelay(), &Priv::HandleSyscallBefore, this);
       return;
     } else if(res == SYSC_ERROR) {
       NS_LOG_ERROR(PNAME << ": [EE] emulated function crashed, syscall: " << syscname(syscall));
@@ -173,6 +177,11 @@ struct GrailApplication::Priv
     }
     int syscall = get_reg(pid, orig_rax);
     NS_LOG_LOGIC(pid << ": [EE] [" << Simulator::Now().GetSeconds() << "s] caught syscall: " << syscname(syscall));
+
+    Time t = pollLoopDetector.HandleSystemCall(pid, syscall);
+    if ( t > Seconds(0) ) {
+    NS_LOG_LOGIC(pid << ": [EE] [" << Simulator::Now().GetSeconds() << "s] poll loop detected, current delay: " << t);
+    }
 
     SyscallHandlerStatusCode res;
     
