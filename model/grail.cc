@@ -101,6 +101,11 @@ GrailApplication::GetTypeId (void)
                    TimeValue (NanoSeconds(0)),
                    MakeTimeAccessor (&GrailApplication::m_syscallProcessingTime),
                    MakeTimeChecker ())
+    .AddAttribute ("PollLoopDetection",
+                   "Use a detection heuristic and backoff strategy for poll loops.",
+                   BooleanValue (true),
+                   MakeBooleanAccessor (&GrailApplication::m_pollLoopDetection),
+                   MakeBooleanChecker ())
   ;
   return tid;
 }
@@ -178,9 +183,11 @@ struct GrailApplication::Priv
     int syscall = get_reg(pid, orig_rax);
     NS_LOG_LOGIC(pid << ": [EE] [" << Simulator::Now().GetSeconds() << "s] caught syscall: " << syscname(syscall));
 
-    Time t = pollLoopDetector.HandleSystemCall(pid, syscall);
-    if ( t > Seconds(0) ) {
-    NS_LOG_LOGIC(pid << ": [EE] [" << Simulator::Now().GetSeconds() << "s] poll loop detected, current delay: " << t);
+    if(app->m_pollLoopDetection) {
+      Time t = pollLoopDetector.HandleSystemCall(pid, syscall);
+      if ( t > Seconds(0) ) {
+        NS_LOG_LOGIC(pid << ": [EE] [" << Simulator::Now().GetSeconds() << "s] poll loop detected, current delay: " << t);
+      }
     }
 
     SyscallHandlerStatusCode res;
