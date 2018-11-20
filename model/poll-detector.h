@@ -45,7 +45,7 @@ namespace ns3
 
     const Time GetDelay() const {
       // maximum of 1ms
-      return ( pollSteps == 0 ? Seconds(0.0) : std::max(1.0,std::max(std::pow(2.0,pollSteps),10000.0)) * NanoSeconds(100) );
+      return ( pollSteps == 0 ? Seconds(0.0) : std::max(1.0,std::min(std::pow(2.0,pollSteps),10000.0)) * NanoSeconds(100) );
     }
   private:
     uint32_t pollSteps;
@@ -58,21 +58,18 @@ namespace ns3
       :previousCallQualified(false)
     {}
     bool operator()(pid_t pid, int syscall) {
-      bool thisCallQualifies = false;
+      bool thisCallQualifies;
       if(syscall == SYS_gettimeofday) {
         thisCallQualifies = true;
       } else if(syscall == SYS_select) {
         thisCallQualifies = true;
+      } else {
+        thisCallQualifies = false;
       }
 
-      if(previousCallQualified) {
-        previousCallQualified = thisCallQualifies;
-        return thisCallQualifies;
-      }
-      else {
-        previousCallQualified = thisCallQualifies;
-        return false;
-      }
+      bool result = previousCallQualified && thisCallQualifies;
+      previousCallQualified = thisCallQualifies;
+      return result;
     }
   private:
     bool previousCallQualified;
