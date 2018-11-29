@@ -60,7 +60,7 @@ int main (int argc, char *argv[])
   Time::SetResolution (Time::NS);
 
   LogComponentEnable("GrailApplication", LOG_LEVEL_ERROR);
-  LogComponentEnable("SyscallWrapperNetlink", LOG_LEVEL_ERROR);
+  LogComponentEnable("GrailNetlink", LOG_LEVEL_ERROR);
 
   NodeContainer nodes;
   nodes.Create (2);
