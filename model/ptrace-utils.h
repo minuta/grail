@@ -37,6 +37,9 @@ enum SyscallHandlerStatusCode {
   SYSC_MANUAL      = 0x20  /* same as DELAYED, but without logging       */
 };
 
+
+// this variation of the FAKE method should be used inside the function
+// FAKE waits for kernel's answer to a priv. issued syscall and replaces kernel's answer with ret_val
 #define FAKE(ret_val) do {                                              \
     set_reg(pid, orig_rax, SYS_getpid);                                 \
     if (WaitForSyscall(pid) != 0) {                                     \
@@ -46,6 +49,8 @@ enum SyscallHandlerStatusCode {
     NS_LOG_LOGIC(pid << ": [EE] FAKE syscall returned: " << ret_val);   \
   } while(0)
 
+
+// this variation of the FAKE method should be used outside the function
 #define FAKE2(ret_val) do {                                             \
     set_reg(pid, orig_rax, SYS_getpid);                                 \
     if (WaitForSyscall(pid) != 0) {                                     \
@@ -225,6 +230,13 @@ void StoreToTracee(int pid, T* from, T* to) {
 }
 
 
+// process with a given PID will be traced via ptrace on appearance of system calls.
+// the traced process behaves normally until a signal is caught.
+// when that occurs the process enters stopped state and informs the tracing process by a waitpid syscall
+//
+// returns : 
+//  0 : success, i.e. syscall was issued
+//  1 : process terminated normally
 inline int WaitForSyscall(int pid) {
   int status;
   while (1) {

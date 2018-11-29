@@ -139,13 +139,16 @@ struct GrailApplication::Priv
   
   int DoTrace();
   
+
+  // this method analyzes the return status code from a syscall handler and does re-schedulung of the method HandleSyscallBefore
+  // i.e. HandleSyscallBefore will be added as an event to the main event loop
   void ProcessStatusCode(SyscallHandlerStatusCode res, int syscall) {
     if(res == SYSC_MANUAL) {
       // do nothing and do not report
       // useful when calling callback directly, see e.g. HandleRecvFrom
     } else if(res == SYSC_SUCCESS) {
       NS_LOG_LOGIC(PNAME << ": [EE] [" << Simulator::Now().GetSeconds() << "s] emulated function succeeded, rr; syscall: " << syscname(syscall));
-      Simulator::Schedule(app->m_syscallProcessingTime, &Priv::HandleSyscallBefore, this);
+      Simulator::Schedule(app->m_syscallProcessingTime, &Priv::HandleSyscallBefore, this);       // re-schedule method HandleSyscallBedore 
       return;
     } else if(res == SYSC_FAILURE) {
       NS_LOG_LOGIC(PNAME << ": [EE] emulated function failed, rr; syscall: " << syscname(syscall));
@@ -169,11 +172,14 @@ struct GrailApplication::Priv
     }
   }
   
+
   void HandleSyscallBefore() {
-    if (WaitForSyscall(pid) != 0) {
+
+    if (WaitForSyscall(pid) != 0) {    // WaitForSyscall(pid) returns 0 if a syscall was triggered
       return;
     }
-    int syscall = get_reg(pid, orig_rax);
+    
+    int syscall = get_reg(pid, orig_rax);      // getting syscall ID from register rax
     NS_LOG_LOGIC(pid << ": [EE] [" << Simulator::Now().GetSeconds() << "s] caught syscall: " << syscname(syscall));
 
     SyscallHandlerStatusCode res;
@@ -382,6 +388,7 @@ struct GrailApplication::Priv
 
     return std::make_shared<Address>(ns3Addr);
   }
+
   // converts an ns-3 address to a BSD socket API address
   // note: reads from and writes to tracee's memory 
   bool SetBsdAddress(const Address& ns3Address, struct sockaddr* addr, socklen_t* addrlen)
@@ -430,6 +437,8 @@ struct GrailApplication::Priv
     MemcpyToTracee(pid, addrlen, &cAddrSize, sizeof(socklen_t));
     return true;
   }
+
+
   // addr is local variable
   void MakeBsdAddress(const ns3::Ipv4Address& ns3Address, struct sockaddr_in* addr)
   {
@@ -453,6 +462,8 @@ struct GrailApplication::Priv
       inet_pton(AF_INET, ss.str().c_str(), &addr->sin_addr);
     }
   }
+
+
   void MakeBsdAddress(const ns3::Ipv4Mask& ns3Mask, struct sockaddr_in* addr)
   {
     // struct sockaddr_in
@@ -468,6 +479,9 @@ struct GrailApplication::Priv
     addr->sin_addr.s_addr = htons(ns3Mask.Get ());
   }
 
+
+  // wait for an answer from kernel to prev. issued system call of a child process with given PID
+  // return success, if child process is not terminated yet and will continue its execution later.
   SyscallHandlerStatusCode HandleSyscallAfter() {
     if (WaitForSyscall(pid) != 0) {
       return SYSC_ERROR;
@@ -505,6 +519,7 @@ struct GrailApplication::Priv
 
     return false;
   }
+
   /* checks whether the file descriptor is managed by syscall wrapper
      (assumed to first argument)
   */
@@ -951,6 +966,7 @@ struct GrailApplication::Priv
       }
     }
   }
+
   // int getsockname(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
   SyscallHandlerStatusCode HandleGetSockName() {
     int sockfd;
@@ -1903,7 +1919,7 @@ struct GrailApplication::Priv
     struct timespec* _req = (timespec*)malloc(ALIGN(sizeof(struct timespec)));
     MemcpyFromTracee(pid, _req,req,sizeof(struct timespec));
 
-    std::function<void()> cb = [this](){
+    std::function<void()> cb = [this](){             // this function wrapper will be used for re-scheduling 
       SyscallHandlerStatusCode res = SYSC_SUCCESS;
       do {
         FAKE2(0);
@@ -1973,7 +1989,7 @@ struct GrailApplication::Priv
     
     StoreToTracee(pid, &mytv, tv);
 
-    FAKE(0);
+    FAKE(0);   // kernel's answer = success
     return SYSC_SUCCESS;
   }
 
@@ -2153,7 +2169,9 @@ struct GrailApplication::Priv
       NS_ASSERT(false && "only wifi and p2p interfaces supported for now");
     }
   }
+
 };
+
 
 GrailApplication::GrailApplication ()
   :p(new Priv)
