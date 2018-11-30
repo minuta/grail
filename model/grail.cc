@@ -631,8 +631,17 @@ struct GrailApplication::Priv
       // pass through
       return HandleSyscallAfter();
     } else if(m_sockets.find(fd) != m_sockets.end()) {
-      m_sockets.at(fd)->Close();
+      Ptr<Socket> sock = m_sockets.at(fd);
+      sock->Close();
       m_sockets.erase(fd);
+      // we must delay the deletion of the socket, since the DataSent callback may fail otherwise
+      // the constant delay of one second likely has a large safety margin
+      std::function<void()> removeClosedSocket = [sock]()
+                                                 {
+                                                   sock->Close(); // close again to avoid compiler optimizations
+                                                   return;
+                                                 };
+      Simulator::Schedule(Seconds(1.0), MakeFunctionalEvent(removeClosedSocket));
       FAKE(0);
       return SYSC_SUCCESS;
     } else if(m_netlinks.find(fd) != m_netlinks.end()) {
