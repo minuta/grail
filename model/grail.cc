@@ -119,7 +119,7 @@ struct GrailApplication::Priv
   uint32_t uid;
   uint32_t euid;  
 
-  std::vector<int> tid_vector;
+  std::vector<int> tid_vector;  // vector with tids of all created threads
 
   // State to maintain for the protocol process  
   Ptr<UniformRandomVariable> rng;
@@ -499,7 +499,11 @@ struct GrailApplication::Priv
     int retval = get_reg(pid, rax);   // thread ID
     tid_vector.push_back(retval);     // save current TID
     
+
+    // TODO: schedule an event with this TID
+    
     NS_LOG_LOGIC(pid << ": [EE] SYSTEM syscall CLONE returned: " << retval);
+
 
     return SYSC_SUCCESS;
   }

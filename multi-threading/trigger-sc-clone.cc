@@ -11,7 +11,7 @@
 const int NUM_OF_THREADS {5};
 
 void *sayHi(void *threadId){
-    std::cout << ">>> hello from THREAD #" << long(threadId) << std::endl;
+    std::cout << "------> hello from THREAD #" << long(threadId) << std::endl;
     pthread_exit(NULL); 
 }
 
