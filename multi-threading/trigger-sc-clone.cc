@@ -21,6 +21,8 @@ int main(int argc, char const *argv[])
     // std::cout << ">>> hello from the multi-threaded app" << std::endl;
     // std::cout << ">>> planning to create " << NUM_OF_THREADS << " threads:" << std::endl;
 
+    std::cout << ">>> starting NS-3 application..." << std::endl;
+
     pthread_t threads[NUM_OF_THREADS];
 
     for(size_t i = 1; i < NUM_OF_THREADS+1; i++){
@@ -35,5 +37,6 @@ int main(int argc, char const *argv[])
     
     pthread_exit(NULL);
 
+    std::cout << ">>> finishing NS-3 application..." << std::endl;
     return EXIT_SUCCESS;
 }
