@@ -106,9 +106,12 @@ GrailApplication::GetTypeId (void)
 
 struct GrailApplication::Priv
 {
-  #define PNAME pid  
+  #define PNAME app_pid  
   pid_t pid;
+  pid_t current_pid;
+  pid_t app_pid;     // application's PID
   pid_t fake_pid;
+
   std::vector<std::string> args;
   Ptr<GrailApplication> app;
   Ptr<HgRoutingProtocol> rt;
@@ -142,17 +145,19 @@ struct GrailApplication::Priv
 
   // this method analyzes the return status code from a syscall handler and does re-schedulung of the method HandleSyscallBefore
   // i.e. HandleSyscallBefore will be added as an event to the main event loop
-  void ProcessStatusCode(SyscallHandlerStatusCode res, int syscall) {
+  void ProcessStatusCode(SyscallHandlerStatusCode res, int syscall, pid_t pid) {
     if(res == SYSC_MANUAL) {
       // do nothing and do not report
       // useful when calling callback directly, see e.g. HandleRecvFrom
     } else if(res == SYSC_SUCCESS) {
       NS_LOG_LOGIC(PNAME << ": [EE] [" << Simulator::Now().GetSeconds() << "s] emulated function succeeded, rr; syscall: " << syscname(syscall));
-      Simulator::Schedule(app->m_syscallProcessingTime, &Priv::HandleSyscallBefore, this);       // re-schedule method HandleSyscallBedore 
+      Simulator::Schedule(app->m_syscallProcessingTime, &Priv::HandleSyscallBefore, this, pid);       // re-schedule method HandleSyscallBedore 
+      //Simulator::Schedule(app->m_syscallProcessingTime, &Priv::HandleSyscallBefore, this);       // re-schedule method HandleSyscallBedore 
       return;
     } else if(res == SYSC_FAILURE) {
       NS_LOG_LOGIC(PNAME << ": [EE] emulated function failed, rr; syscall: " << syscname(syscall));
-      Simulator::Schedule(app->m_syscallProcessingTime, &Priv::HandleSyscallBefore, this);
+      Simulator::Schedule(app->m_syscallProcessingTime, &Priv::HandleSyscallBefore, this, pid);
+      //Simulator::Schedule(app->m_syscallProcessingTime, &Priv::HandleSyscallBefore, this);
       return;
     } else if(res == SYSC_ERROR) {
       NS_LOG_ERROR(PNAME << ": [EE] emulated function crashed, syscall: " << syscname(syscall));
@@ -173,7 +178,7 @@ struct GrailApplication::Priv
   }
   
 
-  void HandleSyscallBefore() {
+  void HandleSyscallBefore(pid_t pid) {
 
     if (WaitForSyscall(pid) != 0) {    // WaitForSyscall(pid) returns 0 if a syscall was triggered
       return;
@@ -363,7 +368,7 @@ struct GrailApplication::Priv
       NS_LOG_ERROR(pid << ": [EE] unsupported system call: " << syscname(syscall));
       exit(1);
     }
-    ProcessStatusCode(res, syscall);
+    ProcessStatusCode(res, syscall, pid);
   }
 
   // converts a BSD socket API address to an ns-3 address
@@ -493,12 +498,14 @@ struct GrailApplication::Priv
   }
 
   SyscallHandlerStatusCode HandleSyscallAfterClone() {
+
     if (WaitForSyscall(pid) != 0) {
       return SYSC_ERROR;
     }
     int retval = get_reg(pid, rax);   // thread ID
     tid_vector.push_back(retval);     // save current TID
-    
+
+    //pid = retval;  
 
     // TODO: schedule an event with this TID
     
@@ -615,7 +622,7 @@ struct GrailApplication::Priv
         
         } while(false);
       
-        ProcessStatusCode(res, SYS_read);
+        ProcessStatusCode(res, SYS_read, pid);
 
         // reset ns3 callback (recvfrom is blocking, thus a one-shot callback)
         // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -1146,12 +1153,12 @@ struct GrailApplication::Priv
       
       SyscallHandlerStatusCode res = SYSC_SUCCESS;
       FAKE2(0);
-      ProcessStatusCode(res, SYS_connect);
+      ProcessStatusCode(res, SYS_connect, pid);
     };
     std::function<void(Ptr<Socket>)> failure = [this](Ptr<Socket> sock) {
       SyscallHandlerStatusCode res = SYSC_FAILURE;
       FAKE2(-1);
-      ProcessStatusCode(res, SYS_connect);
+      ProcessStatusCode(res, SYS_connect, pid);
     };
     
     m_sockets.at(sockfd)->SetConnectCallback(MakeFunctionCallback(success),
@@ -1554,7 +1561,7 @@ struct GrailApplication::Priv
               StoreToTracee(pid, &newexceptfds, exceptfds);
               FAKE2(1);
             } while(false);
-            ProcessStatusCode(res, SYS_select);
+            ProcessStatusCode(res, SYS_select, pid);
             sock->SetSendCallback(MakeNullCallback<void,Ptr<Socket>,uint32_t>());
           };
             
@@ -1611,7 +1618,7 @@ struct GrailApplication::Priv
                   StoreToTracee(pid, &newexceptfds, exceptfds);
                   FAKE2(1);
                 } while(false);
-                ProcessStatusCode(res, SYS_select);
+                ProcessStatusCode(res, SYS_select, pid);
               };
 
             NS_LOG_LOGIC(pid << " [" << Simulator::Now().GetSeconds() << "s] " << "setting new accept callback");
@@ -1645,7 +1652,7 @@ struct GrailApplication::Priv
                 StoreToTracee(pid, &newexceptfds, exceptfds);
                 FAKE2(1);
               } while(false);
-              ProcessStatusCode(res, SYS_select);
+              ProcessStatusCode(res, SYS_select, pid);
               sock->SetRecvCallback(MakeNullCallback<void,Ptr<Socket>>());
             };
             
@@ -1691,7 +1698,7 @@ struct GrailApplication::Priv
               StoreToTracee(pid, &newexceptfds, exceptfds);
               FAKE2(1);
             } while(false);
-            ProcessStatusCode(res, SYS_select);
+            ProcessStatusCode(res, SYS_select, pid);
             nl_sock->UnsetRecvCallback();
           };
             
@@ -1719,7 +1726,7 @@ struct GrailApplication::Priv
             // }
             FAKE2(0);
           } while(0);
-          ProcessStatusCode(res, SYS_select);
+          ProcessStatusCode(res, SYS_select, pid);
         };
         NS_LOG_LOGIC(pid << " [" << Simulator::Now().GetSeconds() << "s] " << "setting new timeout");
         *timeout_event = Simulator::Schedule(Seconds(mytimeout.tv_sec)+MicroSeconds(mytimeout.tv_usec),
@@ -1888,7 +1895,7 @@ struct GrailApplication::Priv
         
       } while(false);
       
-      ProcessStatusCode(res, SYS_recvfrom);
+      ProcessStatusCode(res, SYS_recvfrom, pid);
 
       // reset ns3 callback (recvfrom is blocking, thus a one-shot callback)
       // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -1928,7 +1935,7 @@ struct GrailApplication::Priv
       do {
         FAKE2(0);
       } while(0);
-      ProcessStatusCode(res, SYS_nanosleep);
+      ProcessStatusCode(res, SYS_nanosleep, pid);
     };
     
     Simulator::Schedule(Seconds(_req->tv_sec)+NanoSeconds(_req->tv_nsec), MakeFunctionalEvent(cb));
@@ -1947,7 +1954,7 @@ struct GrailApplication::Priv
     std::function<void()> cb = [this](){
       SyscallHandlerStatusCode res = SYSC_SUCCESS;
       kill(pid, SIGALRM);
-      ProcessStatusCode(res, SYS_alarm);
+      ProcessStatusCode(res, SYS_alarm, pid);
     };
 
     Time timeLeft = Seconds (0);
@@ -2241,6 +2248,7 @@ void GrailApplication::StartApplication (void)
     }
   } else {
     p->pid = child;
+    p->app_pid = child;  // save application pid
     p->DoTrace();
   }
 }
@@ -2263,11 +2271,11 @@ void GrailApplication::StopApplication (void)
 
 int GrailApplication::Priv::DoTrace() {
   int status, c;
-  waitpid(pid, &status, 0);
-  c = ptrace(PTRACE_SETOPTIONS, pid, 0, PTRACE_O_TRACESYSGOOD | PTRACE_O_EXITKILL);
+  waitpid(app_pid, &status, 0);
+  c = ptrace(PTRACE_SETOPTIONS, app_pid, 0, PTRACE_O_TRACESYSGOOD | PTRACE_O_EXITKILL);
   NS_ASSERT(c == 0);
   
-  HandleSyscallBefore();
+  HandleSyscallBefore(app_pid);
   
   return 0;
 }
