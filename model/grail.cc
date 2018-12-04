@@ -151,8 +151,8 @@ struct GrailApplication::Priv
       // useful when calling callback directly, see e.g. HandleRecvFrom
     } else if(res == SYSC_SUCCESS) {
       NS_LOG_LOGIC(PNAME << ": [EE] [" << Simulator::Now().GetSeconds() << "s] emulated function succeeded, rr; syscall: " << syscname(syscall));
-      Simulator::Schedule(app->m_syscallProcessingTime, &Priv::HandleSyscallBefore, this, pid);       // re-schedule method HandleSyscallBedore 
-      //Simulator::Schedule(app->m_syscallProcessingTime, &Priv::HandleSyscallBefore, this);       // re-schedule method HandleSyscallBedore 
+      Simulator::Schedule(app->m_syscallProcessingTime, &Priv::HandleSyscallBefore, this, pid);       // re-schedule method HandleSyscallBefore 
+      //Simulator::Schedule(app->m_syscallProcessingTime, &Priv::HandleSyscallBefore, this);       // re-schedule method HandleSyscallBefore 
       return;
     } else if(res == SYSC_FAILURE) {
       NS_LOG_LOGIC(PNAME << ": [EE] emulated function failed, rr; syscall: " << syscname(syscall));
@@ -340,6 +340,7 @@ struct GrailApplication::Priv
     case SYS_getrusage:
       res = HandleGetRUsage();
       break;
+      
       // user permissions (for now fixed result (root))
     case SYS_getuid:
       res = SYSC_SUCCESS;
@@ -497,6 +498,7 @@ struct GrailApplication::Priv
     return SYSC_SUCCESS;
   }
 
+
   SyscallHandlerStatusCode HandleSyscallAfterClone() {
 
     if (WaitForSyscall(pid) != 0) {
@@ -505,12 +507,15 @@ struct GrailApplication::Priv
     int retval = get_reg(pid, rax);   // thread ID
     tid_vector.push_back(retval);     // save current TID
 
-    //pid = retval;  
-
-    // TODO: schedule an event with this TID
+    std::function<void()> eventHandler = [this, retval](){   
+        HandleSyscallBefore(retval);
+    };
     
+    Simulator::Schedule(NanoSeconds(100), MakeFunctionalEvent(eventHandler));
+
     NS_LOG_LOGIC(pid << ": [EE] SYSTEM syscall CLONE returned: " << retval);
 
+    // whats about return value?
 
     return SYSC_SUCCESS;
   }
