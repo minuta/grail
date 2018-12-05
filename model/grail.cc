@@ -106,7 +106,7 @@ GrailApplication::GetTypeId (void)
 
 struct GrailApplication::Priv
 {
-  #define PNAME app_pid  
+  //#define PNAME pid  
   pid_t pid;
   pid_t current_pid;
   pid_t app_pid;     // application's PID
@@ -150,26 +150,26 @@ struct GrailApplication::Priv
       // do nothing and do not report
       // useful when calling callback directly, see e.g. HandleRecvFrom
     } else if(res == SYSC_SUCCESS) {
-      NS_LOG_LOGIC(PNAME << ": [EE] [" << Simulator::Now().GetSeconds() << "s] emulated function succeeded, rr; syscall: " << syscname(syscall));
+      NS_LOG_LOGIC(pid << ": [EE] [" << Simulator::Now().GetSeconds() << "s] emulated function succeeded, rr; syscall: " << syscname(syscall));
       Simulator::Schedule(app->m_syscallProcessingTime, &Priv::HandleSyscallBefore, this, pid);       // re-schedule method HandleSyscallBefore 
       //Simulator::Schedule(app->m_syscallProcessingTime, &Priv::HandleSyscallBefore, this);       // re-schedule method HandleSyscallBefore 
       return;
     } else if(res == SYSC_FAILURE) {
-      NS_LOG_LOGIC(PNAME << ": [EE] emulated function failed, rr; syscall: " << syscname(syscall));
+      NS_LOG_LOGIC(pid << ": [EE] emulated function failed, rr; syscall: " << syscname(syscall));
       Simulator::Schedule(app->m_syscallProcessingTime, &Priv::HandleSyscallBefore, this, pid);
       //Simulator::Schedule(app->m_syscallProcessingTime, &Priv::HandleSyscallBefore, this);
       return;
     } else if(res == SYSC_ERROR) {
-      NS_LOG_ERROR(PNAME << ": [EE] emulated function crashed, syscall: " << syscname(syscall));
+      NS_LOG_ERROR(pid << ": [EE] emulated function crashed, syscall: " << syscname(syscall));
       exit(1);
     } else if(res == SYSC_DELAYED) {
-      NS_LOG_LOGIC(PNAME << ": [EE] emulated function is delayed");
+      NS_LOG_LOGIC(pid << ": [EE] emulated function is delayed");
       // do nothing, handler is expected to register required events
     } else if(res == SYSC_SYSTEM_EXIT) {
       if(app->m_mayQuit) {
-        NS_LOG_LOGIC(PNAME << ": [EE] emulated application's execution completed");
+        NS_LOG_LOGIC(pid << ": [EE] emulated application's execution completed");
       } else {
-        NS_LOG_ERROR(PNAME << ": [EE] emulated application's execution completed");
+        NS_LOG_ERROR(pid << ": [EE] emulated application's execution completed");
         exit(1);
       }
     } else {
@@ -179,6 +179,8 @@ struct GrailApplication::Priv
   
 
   void HandleSyscallBefore(pid_t pid) {
+
+    this->pid = pid;
 
     if (WaitForSyscall(pid) != 0) {    // WaitForSyscall(pid) returns 0 if a syscall was triggered
       return;
