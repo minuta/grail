@@ -8,7 +8,7 @@
 #include <iostream>
 #include <pthread.h>
 
-const int NUM_OF_THREADS {5};
+const int NUM_OF_THREADS {2};
 
 void *sayHi(void *threadId){
     std::cout << "------> hello from THREAD #" << long(threadId) << std::endl;
