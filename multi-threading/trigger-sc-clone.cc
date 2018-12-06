@@ -18,7 +18,6 @@ void *sayHi(void *threadId){
 
 int main(int argc, char const *argv[])
 {
-    // std::cout << ">>> hello from the multi-threaded app" << std::endl;
     // std::cout << ">>> planning to create " << NUM_OF_THREADS << " threads:" << std::endl;
 
     std::cout << ">>> starting NS-3 application..." << std::endl;
@@ -34,8 +33,21 @@ int main(int argc, char const *argv[])
             std::cout << ">>> error : failed to create a new THREAD #" << i << std::endl;
         }        
     }
+
+    //TODO: do a pthread_join(), otherwise the main thread can terminate before other threads terminate and thus
+    //      force them to terminate!
+
+
+    //for(size_t i = 1; i <= NUM_OF_THREADS; i++){
+        //if (pthread_join(threads[i], NULL)==0)
+            //std::cout << ">>> THREAD #" << i << " joined successfully" << std::endl;
+        //else
+            //std::cout << ">>> THREAD #" << i << " couldn't be joined successfully" << std::endl;
+    //}
+
+
     
-    pthread_exit(NULL);
+    //pthread_exit(NULL);   // obsolete, due to the return statement in the main()
 
     std::cout << ">>> finishing NS-3 application..." << std::endl;
     return EXIT_SUCCESS;

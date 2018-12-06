@@ -362,10 +362,15 @@ struct GrailApplication::Priv
       break;
 
 
-    // pthread system calls
+    // pthread system calls --------------------------------------------------------------
     case SYS_clone:
-      res = HandleClone();
-      break;
+        res = HandleClone();
+        break;
+
+    case SYS_futex:
+        res = HandleFutex();
+        break;
+    // ------------------------------------------------------------------------------------
 
     default:
       NS_LOG_ERROR(pid << ": [EE] unsupported system call: " << syscname(syscall));
