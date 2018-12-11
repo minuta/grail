@@ -8,7 +8,7 @@
 #include <iostream>
 #include <pthread.h>
 
-const int NUM_OF_THREADS {2};
+const int NUM_OF_THREADS {1};
 
 void *sayHi(void *threadId){
     std::cout << "------> hello from THREAD #" << long(threadId) << std::endl;
@@ -18,7 +18,6 @@ void *sayHi(void *threadId){
 
 int main(int argc, char const *argv[])
 {
-    // std::cout << ">>> planning to create " << NUM_OF_THREADS << " threads:" << std::endl;
 
     std::cout << ">>> starting NS-3 application..." << std::endl;
 
@@ -34,17 +33,13 @@ int main(int argc, char const *argv[])
         }        
     }
 
-    //TODO: do a pthread_join(), otherwise the main thread can terminate before other threads terminate and thus
-    //      force them to terminate!
-
-
-    //for(size_t i = 1; i <= NUM_OF_THREADS; i++){
-        //if (pthread_join(threads[i], NULL)==0)
-            //std::cout << ">>> THREAD #" << i << " joined successfully" << std::endl;
-        //else
-            //std::cout << ">>> THREAD #" << i << " couldn't be joined successfully" << std::endl;
-    //}
-
+    // do a pthread_join(), otherwise the main thread can terminate before other threads terminate and thus force them to terminate!
+    for(size_t i = 1; i <= NUM_OF_THREADS; i++){
+        if (pthread_join(threads[i], NULL)==0)
+            std::cout << ">>> THREAD #" << i << " joined successfully" << std::endl;
+        else
+            std::cout << ">>> THREAD #" << i << " couldn't be joined successfully" << std::endl;
+    }
 
     
     //pthread_exit(NULL);   // obsolete, due to the return statement in the main()
