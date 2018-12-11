@@ -33,6 +33,8 @@
 #include <linux/netlink.h>
 #include <linux/wireless.h>
 #include <linux/if.h>
+//#include <linux/futex.h>
+//#include <sys/time.h>
 
 #include <set>
 #include <regex>
@@ -220,7 +222,7 @@ struct GrailApplication::Priv
       // needs further research (likely requires at least partial re-implementation at some point):
     case SYS_rt_sigaction:   // can block wait?
     case SYS_rt_sigprocmask: // can block wait?
-    case SYS_futex:          // MT?
+    //case SYS_futex:          // MT?
     case SYS_gettid:         // MT?
     case SYS_tgkill:         // MT?
 
@@ -2165,6 +2167,25 @@ struct GrailApplication::Priv
     //return SYSC_ERROR;
   }
 
+
+
+  // int futex(int *uaddr, int futex_op, int val,
+  //                const struct timespec *timeout,   /* or: uint32_t val2 */
+  //               int *uaddr2, int val3);
+  SyscallHandlerStatusCode HandleFutex(){
+    int *uaddr;
+    int futex_op;
+    int val;
+    //const struct timespec *timeout;
+    //int *uaddr2;
+    //int val3;
+
+    read_args (pid, uaddr, futex_op, val /*, timeout, uaddr2, val3 */);
+    NS_LOG_LOGIC("FUTEX CALL , pid: " << pid << " futex_op: " << futex_op << " val: " << val);
+    
+
+    return HandleSyscallAfter();
+  }
 
 
   Ptr<NetDevice> GetNetDeviceByName(const std::string& ifname) {
