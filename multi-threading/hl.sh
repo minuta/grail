@@ -11,7 +11,8 @@
 # 
 
 TAG_1="THREAD #1"
-TAG_2="THREAD #2"
+#TAG_2="THREAD #2"
+TAG_2="futex"
 TAG_3="clone"
 TAG_4=$2      # TID 1 (main/initial thread)
 TAG_5=$3      # TID 2
