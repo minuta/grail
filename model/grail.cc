@@ -2185,13 +2185,12 @@ struct GrailApplication::Priv
 
     LoadFromTracee(pid, &my_uaddr, uaddr);
 
-    NS_LOG_LOGIC("FUTEX CALL , pid: " << pid << 
-                 " *uaddr: " << my_uaddr << 
-                 " futex_op: " << futex_op << 
-                 " val: " << val);
+    //NS_LOG_LOGIC("FUTEX CALL , pid: " << pid << 
+                 //" *uaddr: " << my_uaddr << 
+                 //" futex_op: " << futex_op << 
+                 //" val: " << val);
 
-    if (futex_op == FUTEX_WAIT){      // 0 = FUTEX_WAIT   see linux/futex.h
-        NS_LOG_LOGIC("----------------> Boom!");
+    if (futex_op == FUTEX_WAIT){      
 
         if (my_uaddr == val){
             FAKE(EAGAIN);   // try again
