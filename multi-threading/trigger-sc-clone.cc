@@ -42,8 +42,8 @@ int main(int argc, char const *argv[])
     }
 
     
-    //pthread_exit(NULL);   // obsolete, due to the return statement in the main()
-
     std::cout << ">>> finishing NS-3 application..." << std::endl;
+    pthread_exit(NULL);   // obsolete, due to the return statement in the main()
+
     return EXIT_SUCCESS;
 }
