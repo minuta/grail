@@ -33,7 +33,7 @@
 #include <linux/netlink.h>
 #include <linux/wireless.h>
 #include <linux/if.h>
-//#include <linux/futex.h>
+#include <linux/futex.h>
 //#include <sys/time.h>
 
 #include <set>
@@ -2174,6 +2174,7 @@ struct GrailApplication::Priv
   //               int *uaddr2, int val3);
   SyscallHandlerStatusCode HandleFutex(){
     int *uaddr;
+    int my_uaddr;
     int futex_op;
     int val;
     //const struct timespec *timeout;
@@ -2181,9 +2182,22 @@ struct GrailApplication::Priv
     //int val3;
 
     read_args (pid, uaddr, futex_op, val /*, timeout, uaddr2, val3 */);
-    NS_LOG_LOGIC("FUTEX CALL , pid: " << pid << " futex_op: " << futex_op << " val: " << val);
-    
 
+    LoadFromTracee(pid, &my_uaddr, uaddr);
+
+    NS_LOG_LOGIC("FUTEX CALL , pid: " << pid << 
+                 " *uaddr: " << my_uaddr << 
+                 " futex_op: " << futex_op << 
+                 " val: " << val);
+
+    if (futex_op == FUTEX_WAIT){      // 0 = FUTEX_WAIT   see linux/futex.h
+        NS_LOG_LOGIC("----------------> Boom!");
+
+        if (my_uaddr == val){
+            FAKE(EAGAIN);   // try again
+            return SYSC_SUCCESS;
+        }
+    }
     return HandleSyscallAfter();
   }
 
