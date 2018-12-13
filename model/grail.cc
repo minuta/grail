@@ -219,6 +219,10 @@ struct GrailApplication::Priv
     case SYS_get_robust_list:
     case SYS_arch_prctl:
 
+    // sys-calls which are appeared during implementation of the multi-threading
+    case SYS_madvise:
+    case SYS_exit:
+
       // needs further research (likely requires at least partial re-implementation at some point):
     case SYS_rt_sigaction:   // can block wait?
     case SYS_rt_sigprocmask: // can block wait?
