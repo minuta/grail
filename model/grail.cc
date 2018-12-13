@@ -125,6 +125,7 @@ struct GrailApplication::Priv
   uint32_t euid;  
 
   std::vector<int> tid_vector;  // vector with tids of all created threads
+  //bool appTerminated = false;
 
   // State to maintain for the protocol process  
   Ptr<UniformRandomVariable> rng;
@@ -169,12 +170,17 @@ struct GrailApplication::Priv
       // do nothing, handler is expected to register required events
     } else if(res == SYSC_SYSTEM_EXIT) {
       if(app->m_mayQuit) {
+        //appTerminated = true;
         NS_LOG_LOGIC(pid << ": [EE] emulated application's execution completed");
       } else {
         NS_LOG_ERROR(pid << ": [EE] emulated application's execution completed");
         exit(1);
       }
-    } else {
+    //} else if (res == SYSC_THREAD_EXIT) {
+        //NS_LOG_LOGIC(pid << ": [EE] emulated application's thread completed");
+    //}
+    }
+    else {
       NS_ASSERT(false);
     }
   }
@@ -182,7 +188,7 @@ struct GrailApplication::Priv
 
   void HandleSyscallBefore(pid_t pid) {
 
-    this->pid = pid;
+    this->pid = pid;  // updating PID. Important for thread handling
 
     if (WaitForSyscall(pid) != 0) {    // WaitForSyscall(pid) returns 0 if a syscall was triggered
       return;
@@ -221,7 +227,7 @@ struct GrailApplication::Priv
 
     // sys-calls which are appeared during implementation of the multi-threading
     case SYS_madvise:
-    case SYS_exit:
+    // case SYS_exit:
 
       // needs further research (likely requires at least partial re-implementation at some point):
     case SYS_rt_sigaction:   // can block wait?
@@ -369,6 +375,7 @@ struct GrailApplication::Priv
 
 
     // pthread system calls --------------------------------------------------------------
+    
     case SYS_clone:
         res = HandleClone();
         break;
@@ -376,6 +383,12 @@ struct GrailApplication::Priv
     case SYS_futex:
         res = HandleFutex();
         break;
+
+    case SYS_exit:
+        res = HandleExit();
+         //res = SYSC_THREAD_EXIT;
+        break;
+
     // ------------------------------------------------------------------------------------
 
     default:
@@ -2194,6 +2207,7 @@ struct GrailApplication::Priv
                  //" futex_op: " << futex_op << 
                  //" val: " << val);
 
+    //if (futex_op == FUTEX_WAIT && !appTerminated){      
     if (futex_op == FUTEX_WAIT){      
 
         if (my_uaddr == val){
@@ -2204,6 +2218,13 @@ struct GrailApplication::Priv
     return HandleSyscallAfter();
   }
 
+  SyscallHandlerStatusCode HandleExit(){
+    //return SYSC_SYSTEM_EXIT;
+    NS_LOG_LOGIC(pid << ": [EE] thread execution completed");
+
+    //TODO: move loggging to the ProcessStatusCode
+    return SYSC_SUCCESS;
+  }
 
   Ptr<NetDevice> GetNetDeviceByName(const std::string& ifname) {
     std::regex wlan_regex("^wlan");

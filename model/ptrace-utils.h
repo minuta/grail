@@ -34,7 +34,8 @@ enum SyscallHandlerStatusCode {
   SYSC_SYSTEM_EXIT = 0x4,  /* application will stop */
   SYSC_DELAYED     = 0x8,  /* application will pause */ 
   SYSC_FAILURE     = 0x10, /* application will run again, failure logged */
-  SYSC_MANUAL      = 0x20  /* same as DELAYED, but without logging       */
+  SYSC_MANUAL      = 0x20,  /* same as DELAYED, but without logging       */
+  //SYSC_THREAD_EXIT = 0x40   
 };
 
 
