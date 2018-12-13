@@ -2190,17 +2190,34 @@ struct GrailApplication::Priv
   //                const struct timespec *timeout,   /* or: uint32_t val2 */
   //               int *uaddr2, int val3);
   SyscallHandlerStatusCode HandleFutex(){
-    int *uaddr;
-    int my_uaddr;
+    int *uaddr; int my_uaddr;
     int futex_op;
     int val;
-    //const struct timespec *timeout;
-    //int *uaddr2;
-    //int val3;
 
-    read_args (pid, uaddr, futex_op, val /*, timeout, uaddr2, val3 */);
+    //const struct timespec *timeout;
+    //const struct timespec my_timeout;
+    //
+    uint32_t val2;
+
+    int *uaddr2; int my_uaddr2;
+    int val3;
+
+    read_args (pid, uaddr, futex_op, val, val2, uaddr2, val3 );
 
     LoadFromTracee(pid, &my_uaddr, uaddr);
+    LoadFromTracee(pid, &my_uaddr2, uaddr2);
+
+    if ( futex_op == FUTEX_WAKE_PRIVATE){  // Kernel wakes up at most val processes on this futex
+      // TODO: you should handle uaddr
+      // change register with uaddr to my_uaddr
+      // set_reg(pid, rdi, my_uaddr);
+      return HandleSyscallAfter();
+    } 
+    else if ( futex_op == FUTEX_WAIT_PRIVATE){
+      return HandleSyscallAfter();
+    } 
+    // else
+      // NS_ASSERT (false && "unknown FUTEX OPERATION : ");
 
     //NS_LOG_LOGIC("FUTEX CALL , pid: " << pid << 
                  //" *uaddr: " << my_uaddr << 
@@ -2208,15 +2225,20 @@ struct GrailApplication::Priv
                  //" val: " << val);
 
     //if (futex_op == FUTEX_WAIT && !appTerminated){      
-    if (futex_op == FUTEX_WAIT){      
+    // if (futex_op == FUTEX_WAKE_PRIVATE){      
 
-        if (my_uaddr == val){
-            FAKE(EAGAIN);   // try again
-            return SYSC_SUCCESS;
-        }
-    }
+    //     if (my_uaddr != val){
+    //         NS_LOG_LOGIC("BOOM!");
+    //         FAKE(EAGAIN);   // try again
+    //         return SYSC_SUCCESS;
+    //     } else
+    //       NS_ASSERT(false && "op=FUTEX_WAIT, nut values are not equal!");
+    // }else
+    //   NS_ASSERT(false && "unknown FUTEX opetation!");
+
     return HandleSyscallAfter();
   }
+
 
   SyscallHandlerStatusCode HandleExit(){
     //return SYSC_SYSTEM_EXIT;
@@ -2224,7 +2246,10 @@ struct GrailApplication::Priv
 
     //TODO: move loggging to the ProcessStatusCode
     return SYSC_SUCCESS;
+    //return SYSC_MANUAL;
   }
+
+
 
   Ptr<NetDevice> GetNetDeviceByName(const std::string& ifname) {
     std::regex wlan_regex("^wlan");
