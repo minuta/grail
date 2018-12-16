@@ -1181,17 +1181,18 @@ struct GrailApplication::Priv
       return SYSC_ERROR;
     }
 
-    std::function<void(Ptr<Socket>)> success = [sockfd,this](Ptr<Socket> sock) {
+    pid_t saved_pid = pid;
+    std::function<void(Ptr<Socket>)> success = [sockfd, this, saved_pid](Ptr<Socket> sock) {
       m_connectedSockets.insert(sockfd);
       
       SyscallHandlerStatusCode res = SYSC_SUCCESS;
       FAKE2(0);
-      ProcessStatusCode(res, SYS_connect, pid);
+      ProcessStatusCode(res, SYS_connect, saved_pid);
     };
-    std::function<void(Ptr<Socket>)> failure = [this](Ptr<Socket> sock) {
+    std::function<void(Ptr<Socket>)> failure = [this, saved_pid](Ptr<Socket> sock) {
       SyscallHandlerStatusCode res = SYSC_FAILURE;
       FAKE2(-1);
-      ProcessStatusCode(res, SYS_connect, pid);
+      ProcessStatusCode(res, SYS_connect, saved_pid);
     };
     
     m_sockets.at(sockfd)->SetConnectCallback(MakeFunctionCallback(success),
