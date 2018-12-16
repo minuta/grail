@@ -59,9 +59,9 @@ private:
   ns3::Ptr<ns3::HgRoutingProtocol> router;
 };
 
-#define UNSUPPORTED(msg) do {                              \
+#define UNSUPPORTED(msg, pid) do {                       \
     NS_LOG_ERROR(pid << ": [EE] UNSUPPORTED: " << msg);  \
-    return SYSC_ERROR;                                      \
+    return SYSC_ERROR;                                   \
   } while(0)
 
 #endif //__NETLINK_H__

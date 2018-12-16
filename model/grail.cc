@@ -588,7 +588,7 @@ struct GrailApplication::Priv
     MemcpyFromTracee(pid, mypipefd, pipefd, 2*sizeof(int));
 
     if(FdIsEmulatedSocket(mypipefd[0]) || FdIsEmulatedSocket(mypipefd[1])) {
-      UNSUPPORTED("pipes on emulated sockets");
+      UNSUPPORTED("pipes on emulated sockets", pid);
       return SYSC_ERROR;
     }
 
@@ -636,6 +636,7 @@ struct GrailApplication::Priv
     }
     else if (m_sockets.find(fd) != m_sockets.end() && m_tcpSockets.count(fd)) {
       Ptr<Socket> ns3socket = m_sockets.at(fd);
+      pid_t saved_pid = pid; 
       std::function<void(Ptr<Socket>)> g = [=](Ptr<Socket> sock) {
         SyscallHandlerStatusCode res;
         do {
@@ -645,7 +646,7 @@ struct GrailApplication::Priv
 
           // copy message to tracee
           if(rlen > 0) {
-            MemcpyToTracee(pid, buf, _buffer, std::min(count,(size_t)rlen));
+            MemcpyToTracee(saved_pid, buf, _buffer, std::min(count,(size_t)rlen));
           }
 
           FAKE2(rlen);
@@ -653,7 +654,7 @@ struct GrailApplication::Priv
         
         } while(false);
       
-        ProcessStatusCode(res, SYS_read, pid);
+        ProcessStatusCode(res, SYS_read, saved_pid);
 
         // reset ns3 callback (recvfrom is blocking, thus a one-shot callback)
         // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -769,7 +770,7 @@ struct GrailApplication::Priv
         FAKE(-1);
         return SYSC_FAILURE;
       }
-      UNSUPPORTED("unknown fctl flag: " << flags);
+      UNSUPPORTED("unknown fctl flag: " << flags, pid);
     }
     return SYSC_ERROR;
     
@@ -944,7 +945,7 @@ struct GrailApplication::Priv
       FAKE(0);
       return SYSC_SUCCESS;
     }
-    UNSUPPORTED("unknown REQUEST: " << ioctlname(request));
+    UNSUPPORTED("unknown REQUEST: " << ioctlname(request), pid);
   }
 
   // ssize_t write(int fd, const void *buf, size_t count);
@@ -977,7 +978,7 @@ struct GrailApplication::Priv
       return SYSC_SUCCESS;
     } else {
       if(!m_connectedSockets.count(fd)) {
-        UNSUPPORTED("write on emulated socket, but it is not a connected TCP socket");
+        UNSUPPORTED("write on emulated socket, but it is not a connected TCP socket", pid);
       }
 
       uint32_t txAvailable = m_sockets.at(fd)->GetTxAvailable();
@@ -988,9 +989,10 @@ struct GrailApplication::Priv
           return SYSC_FAILURE;
         }
 
-        std::function<void(Ptr<Socket>, uint32_t)> sendCallback = [this](Ptr<Socket> sock, uint32_t n)
+        pid_t saved_pid = pid;
+        std::function<void(Ptr<Socket>, uint32_t)> sendCallback = [this, saved_pid](Ptr<Socket> sock, uint32_t n)
           {
-            UNSUPPORTED("blocking wait");
+            UNSUPPORTED("blocking wait", saved_pid);
           };
         
         m_sockets.at(fd)->SetSendCallback(MakeFunctionCallback(sendCallback));
@@ -1031,7 +1033,7 @@ struct GrailApplication::Priv
       }
     }
     
-    UNSUPPORTED("getsockname != netlink");
+    UNSUPPORTED("getsockname != netlink", pid);
   }
 
   // int getpeername(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
@@ -1251,11 +1253,11 @@ struct GrailApplication::Priv
         return SYSC_SUCCESS;
       } else if (optname == SO_REUSEADDR) {
         // no equivalent in ns-3, but there are no lingering sockets in ns-3 either
-        UNSUPPORTED("not implemented");
+        UNSUPPORTED("not implemented", pid);
         // FAKE(0);
         // return SYSC_SUCCESS;
       } else if (optname == SO_RCVBUF) {
-        UNSUPPORTED("not implemented");
+        UNSUPPORTED("not implemented", pid);
         // int myoptval = 0;
         // NS_ASSERT(sizeof(myoptval) >= optlen);
         // MemcpyFromTracee(pid, &myoptval, optval, optlen);
@@ -1264,7 +1266,7 @@ struct GrailApplication::Priv
         // FAKE(0);
         // return SYSC_SUCCESS;
       } else if (optname == SO_BINDTODEVICE) {
-        UNSUPPORTED("not implemented");
+        UNSUPPORTED("not implemented", pid);
         // std::string ifname(optlen,' ');
         // MemcpyFromTracee(pid, (void*)ifname.data(), optval, optlen);
         // NS_LOG_LOGIC(pid << ": [EE] setsockopt(2)/" << sockoptname(optname) << " -> " << ifname);
@@ -1280,7 +1282,7 @@ struct GrailApplication::Priv
         // FAKE(0);
         // return SYSC_SUCCESS;
       } else if (optname == SO_PRIORITY) {
-        UNSUPPORTED("not implemented");
+        UNSUPPORTED("not implemented", pid);
         // int priority;
         // MemcpyFromTracee(pid, &priority, optval, optlen);
         // NS_LOG_LOGIC(pid << ": [EE] setsockopt(2)/" << sockoptname(optname) << " -> " << priority);
@@ -1289,16 +1291,16 @@ struct GrailApplication::Priv
         // FAKE(0);
         return SYSC_SUCCESS;
       } else {
-        UNSUPPORTED("socket getsockopt(2)/" << sockfd  << " option: " << sockoptname(optname));
+        UNSUPPORTED("socket getsockopt(2)/" << sockfd  << " option: " << sockoptname(optname), pid);
       }
     } else if (level == IPPROTO_IP) {
       if (optname == IP_TOS) {
-        UNSUPPORTED("not implemented");
+        UNSUPPORTED("not implemented", pid);
         // // ignore
         // FAKE(0);
         // return SYSC_SUCCESS;
       } else {
-        UNSUPPORTED("ip getsockopt(2)/" << sockfd  << " option: " << sockoptname(optname));
+        UNSUPPORTED("ip getsockopt(2)/" << sockfd  << " option: " << sockoptname(optname), pid);
       }
     } else if (level == IPPROTO_TCP) {
       if (optname == TCP_MAXSEG) {
@@ -1325,7 +1327,7 @@ struct GrailApplication::Priv
         FAKE(-ENOPROTOOPT);
         return SYSC_FAILURE;
       } else {
-        UNSUPPORTED("tcp getsockopt(2)/" << sockfd  << " option: " << tcpsockoptname(optname));
+        UNSUPPORTED("tcp getsockopt(2)/" << sockfd  << " option: " << tcpsockoptname(optname), pid);
       }
     } else {
       FAKE(-ENOPROTOOPT);
@@ -1333,7 +1335,7 @@ struct GrailApplication::Priv
     }
     
     
-    UNSUPPORTED("not implemented");
+    UNSUPPORTED("not implemented", pid);
   }
 
   //int setsockopt(int sockfd, int level, int optname,
@@ -1399,7 +1401,7 @@ struct GrailApplication::Priv
         FAKE(0);
         return SYSC_SUCCESS;
       } else {
-        UNSUPPORTED("setsockopt(2)/" << sockfd  << " option: " << sockoptname(optname));
+        UNSUPPORTED("setsockopt(2)/" << sockfd  << " option: " << sockoptname(optname), pid);
       }
     } else if (level == IPPROTO_IP) {
       if (optname == IP_TOS) {
@@ -1407,16 +1409,16 @@ struct GrailApplication::Priv
         FAKE(0);
         return SYSC_SUCCESS;
       } else {
-        UNSUPPORTED("setsockopt(2)/" << sockfd  << " option: " << sockoptname(optname));
+        UNSUPPORTED("setsockopt(2)/" << sockfd  << " option: " << sockoptname(optname), pid);
       }
     } else if (level == IPPROTO_TCP) {
       if (optname == TCP_CONGESTION) {
         int myoptval = 0;
         NS_ASSERT(sizeof(myoptval) >= optlen);
         MemcpyFromTracee(pid, &myoptval, optval, optlen);
-        UNSUPPORTED("cc algo optavl" << optval);
+        UNSUPPORTED("cc algo optavl" << optval, pid);
       } else {
-        UNSUPPORTED("setsockopt(2)/" << sockfd  << " option: " << tcpsockoptname(optname));
+        UNSUPPORTED("setsockopt(2)/" << sockfd  << " option: " << tcpsockoptname(optname), pid);
       }
     } else {
       FAKE(-ENOPROTOOPT);
@@ -1539,7 +1541,7 @@ struct GrailApplication::Priv
           goto has_data;
         }
         if(exceptfds && FD_ISSET(kv.first,&myexceptfds)) {
-          UNSUPPORTED("exceptfds");
+          UNSUPPORTED("exceptfds", pid);
         }
       }
       for(auto& kv : m_netlinks) {
@@ -1549,7 +1551,7 @@ struct GrailApplication::Priv
           goto has_data;
         }
         if(exceptfds && FD_ISSET(kv.first,&myexceptfds)) {
-          UNSUPPORTED("exceptfds");
+          UNSUPPORTED("exceptfds", pid);
         }
       }
     has_data:
@@ -1605,7 +1607,7 @@ struct GrailApplication::Priv
       }
       // EXCEPT-FDS
       if(exceptfds && FD_ISSET(kv.first,&myexceptfds)) {
-        UNSUPPORTED("exceptfds");
+        UNSUPPORTED("exceptfds", pid);
       }
       // READ-FDS
       if(readfds && FD_ISSET(kv.first,&myreadfds)) {
@@ -1864,7 +1866,7 @@ struct GrailApplication::Priv
       
       return SYSC_SUCCESS;
     } else {
-      UNSUPPORTED("non fake accepted accept call");
+      UNSUPPORTED("non fake accepted accept call", pid);
     }
   }
   
@@ -1961,12 +1963,13 @@ struct GrailApplication::Priv
     struct timespec* _req = (timespec*)malloc(ALIGN(sizeof(struct timespec)));
     MemcpyFromTracee(pid, _req,req,sizeof(struct timespec));
 
-    std::function<void()> cb = [this](){             // this function wrapper will be used for re-scheduling 
+    pid_t saved_pid = pid;
+    std::function<void()> cb = [this, saved_pid](){             // this function wrapper will be used for re-scheduling 
       SyscallHandlerStatusCode res = SYSC_SUCCESS;
       do {
         FAKE2(0);
       } while(0);
-      ProcessStatusCode(res, SYS_nanosleep, pid);
+      ProcessStatusCode(res, SYS_nanosleep, saved_pid);
     };
     
     Simulator::Schedule(Seconds(_req->tv_sec)+NanoSeconds(_req->tv_nsec), MakeFunctionalEvent(cb));
@@ -2207,15 +2210,15 @@ struct GrailApplication::Priv
     LoadFromTracee(pid, &my_uaddr, uaddr);
     LoadFromTracee(pid, &my_uaddr2, uaddr2);
 
-    if ( futex_op == FUTEX_WAKE_PRIVATE){  // Kernel wakes up at most val processes on this futex
+    //if ( futex_op == FUTEX_WAKE_PRIVATE){  // Kernel wakes up at most val processes on this futex
       // TODO: you should handle uaddr
       // change register with uaddr to my_uaddr
       // set_reg(pid, rdi, my_uaddr);
-      return HandleSyscallAfter();
-    } 
-    else if ( futex_op == FUTEX_WAIT_PRIVATE){
-      return HandleSyscallAfter();
-    } 
+      //return HandleSyscallAfter();
+    //} 
+    //else if ( futex_op == FUTEX_WAIT_PRIVATE){
+      //return HandleSyscallAfter();
+    //} 
     // else
       // NS_ASSERT (false && "unknown FUTEX OPERATION : ");
 
