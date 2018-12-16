@@ -1910,6 +1910,7 @@ struct GrailApplication::Priv
       return SYSC_ERROR;
     }
 
+    pid_t saved_pid = pid;
     std::function<void(Ptr<Socket>)> g = [=](Ptr<Socket> sock) {
       SyscallHandlerStatusCode res;
       do {
@@ -1927,7 +1928,7 @@ struct GrailApplication::Priv
 
         // copy message to tracee
         if(rlen > 0) {
-          MemcpyToTracee(pid, buffer, _buffer, std::min(length,(size_t)rlen));
+          MemcpyToTracee(saved_pid, buffer, _buffer, std::min(length,(size_t)rlen));
         }
 
         FAKE2(rlen);
@@ -1935,7 +1936,7 @@ struct GrailApplication::Priv
         
       } while(false);
       
-      ProcessStatusCode(res, SYS_recvfrom, pid);
+      ProcessStatusCode(res, SYS_recvfrom, saved_pid);
 
       // reset ns3 callback (recvfrom is blocking, thus a one-shot callback)
       // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
