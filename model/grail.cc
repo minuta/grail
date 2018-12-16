@@ -1993,10 +1993,11 @@ struct GrailApplication::Priv
     
     read_args(pid, seconds);
 
-    std::function<void()> cb = [this](){
+    pid_t saved_pid = pid;
+    std::function<void()> cb = [this, saved_pid](){
       SyscallHandlerStatusCode res = SYSC_SUCCESS;
-      kill(pid, SIGALRM);
-      ProcessStatusCode(res, SYS_alarm, pid);
+      kill(saved_pid, SIGALRM);
+      ProcessStatusCode(res, SYS_alarm, saved_pid);
     };
 
     Time timeLeft = Seconds (0);
