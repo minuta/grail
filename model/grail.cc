@@ -236,6 +236,7 @@ struct GrailApplication::Priv
     case SYS_gettid:         // MT?
     case SYS_tgkill:         // MT?
 
+
       // definitely needs re-implementation (later on):
     case SYS_uname:  // tor uses this for node name guessing, should be user specifiable
     case SYS_openat: // in.tftpd uses this file/directory access
@@ -388,6 +389,10 @@ struct GrailApplication::Priv
         res = HandleExit();
          //res = SYSC_THREAD_EXIT;
         break;
+
+    //case SYS_exit_group:
+        //res = HandleSyscallAfter();
+        //break;
 
     // ------------------------------------------------------------------------------------
 
@@ -2219,34 +2224,18 @@ struct GrailApplication::Priv
     LoadFromTracee(pid, &my_uaddr, uaddr);
     LoadFromTracee(pid, &my_uaddr2, uaddr2);
 
-    //if ( futex_op == FUTEX_WAKE_PRIVATE){  // Kernel wakes up at most val processes on this futex
-      // TODO: you should handle uaddr
-      // change register with uaddr to my_uaddr
-      // set_reg(pid, rdi, my_uaddr);
-      //return HandleSyscallAfter();
-    //} 
-    //else if ( futex_op == FUTEX_WAIT_PRIVATE){
-      //return HandleSyscallAfter();
-    //} 
-    // else
-      // NS_ASSERT (false && "unknown FUTEX OPERATION : ");
-
     //NS_LOG_LOGIC("FUTEX CALL , pid: " << pid << 
                  //" *uaddr: " << my_uaddr << 
                  //" futex_op: " << futex_op << 
-                 //" val: " << val);
+                 //" val: " << val <<
+                 //" val2: " << val2 <<
+                 //" *uaddr2" << my_uaddr2 <<
+                 //" val3" << val2 );
 
-    //if (futex_op == FUTEX_WAIT && !appTerminated){      
-    // if (futex_op == FUTEX_WAKE_PRIVATE){      
-
-    //     if (my_uaddr != val){
-    //         NS_LOG_LOGIC("BOOM!");
-    //         FAKE(EAGAIN);   // try again
-    //         return SYSC_SUCCESS;
-    //     } else
-    //       NS_ASSERT(false && "op=FUTEX_WAIT, nut values are not equal!");
-    // }else
-    //   NS_ASSERT(false && "unknown FUTEX opetation!");
+    if (futex_op == FUTEX_WAIT || futex_op == FUTEX_WAIT_PRIVATE){      
+        FAKE(0);
+        return SYSC_SUCCESS;
+    } 
 
     return HandleSyscallAfter();
   }

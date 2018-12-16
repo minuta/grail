@@ -8,10 +8,12 @@
 #include <iostream>
 #include <pthread.h>
 
-const int NUM_OF_THREADS {2};
+const int NUM_OF_THREADS {3};
 
 void *sayHi(void *threadId){
-    std::cout << "------> hello from THREAD #" << long(threadId) << std::endl;
+    auto msg = "------> hello from THREAD #" + std::to_string(long(threadId)) + "\n";
+    std::cout << msg;
+    // std::cout << "------> hello from THREAD #" << long(threadId) << std::endl;
     pthread_exit(NULL); 
 }
 

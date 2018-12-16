@@ -238,42 +238,47 @@ void StoreToTracee(int pid, T* from, T* to) {
 // returns : 
 //  0 : success, i.e. syscall was issued
 //  1 : process terminated normally
-//inline int WaitForSyscall(int pid) {
-  //int status;
-  //while (1) {
-    //ptrace(PTRACE_SYSCALL, pid, 0, 0);
-    //waitpid(pid, &status, 0);
-    //if (WIFSTOPPED(status) && WSTOPSIG(status) == (SIGTRAP | 0x80))
-      //return 0;
-    //if (WIFEXITED(status))
-      //return 1;
-  //}
-//}
-
 inline int WaitForSyscall(int pid) {
   int status;
   while (1) {
-    if (WSTOPSIG(status) == SIGALRM) {
-      ptrace(PTRACE_SYSCALL, pid, 0, SIGALRM);
-    } else if (WSTOPSIG(status) == SIGCHLD) {
-      ptrace(PTRACE_SYSCALL, pid, 0, SIGCHLD);
-    } else if (WSTOPSIG(status) == SIGSEGV) {
-      ptrace(PTRACE_SYSCALL, pid, 0, SIGSEGV);
-    } else if (WSTOPSIG(status) == SIGPOLL) {
-      ptrace(PTRACE_SYSCALL, pid, 0, SIGPOLL);
-    } else if (WSTOPSIG(status) == 0 || WSTOPSIG(status) == 127){
-      ptrace(PTRACE_SYSCALL, pid, 0, 0);
-    } else {
-      printf("Unsupported signal number: %i\n", WSTOPSIG(status));
-      return 1;
-    }
+    ptrace(PTRACE_SYSCALL, pid, 0, 0);
     waitpid(pid, &status, 0);
-    if (WIFSTOPPED(status) && WSTOPSIG(status) == (SIGTRAP | 0x80)) {
+    if (WIFSTOPPED(status) && WSTOPSIG(status) == (SIGTRAP | 0x80))
       return 0;
-    }
-
     if (WIFEXITED(status))
       return 1;
   }
 }
+
+//inline int WaitForSyscall(int pid) {
+  //int status;
+  //while (1) {
+    //if (WSTOPSIG(status) == SIGALRM) {
+      //ptrace(PTRACE_SYSCALL, pid, 0, SIGALRM);
+    //} else if (WSTOPSIG(status) == SIGCHLD) {
+      //ptrace(PTRACE_SYSCALL, pid, 0, SIGCHLD);
+    //} else if (WSTOPSIG(status) == SIGSEGV) {
+      //ptrace(PTRACE_SYSCALL, pid, 0, SIGSEGV);
+    //} else if (WSTOPSIG(status) == SIGPOLL) {
+      //ptrace(PTRACE_SYSCALL, pid, 0, SIGPOLL);
+    ////} else if (WSTOPSIG(status) == 85 ) {
+      ////ptrace(PTRACE_SYSCALL, pid, 0, 85);
+    ////} else if (WSTOPSIG(status) == 86 ) {
+      ////ptrace(PTRACE_SYSCALL, pid, 0, 86);
+
+    //} else if (WSTOPSIG(status) == 0 || WSTOPSIG(status) == 127){
+      //ptrace(PTRACE_SYSCALL, pid, 0, 0);
+    //} else {
+      ////printf("Unsupported signal number: %i\n", WSTOPSIG(status));
+      ////return 1;
+    //}
+    //waitpid(pid, &status, 0);
+    //if (WIFSTOPPED(status) && WSTOPSIG(status) == (SIGTRAP | 0x80)) {
+      //return 0;
+    //}
+
+    //if (WIFEXITED(status))
+      //return 1;
+  //}
+//}
 #endif // __PTRACE_UTILS_H__
