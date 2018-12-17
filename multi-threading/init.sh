@@ -11,6 +11,7 @@ FILE_2=runner.cc
 FILE_3=test-1.cc
 FILE_4=test-2.cc
 FILE_5=test-3.cc
+FILE_6=test-4.cc
 
 echo -n "---> changing to NS-3 root folder: "
 cd ../../../ && eval $OK_MSG
@@ -35,3 +36,8 @@ ln -sf ../$MULTI_THREADING_DIR/$FILE_4 $FILE_4 && eval $OK_MSG
 
 echo -n "---> creating sym link for test-3.cc : "
 ln -sf ../$MULTI_THREADING_DIR/$FILE_5 $FILE_5 && eval $OK_MSG
+
+echo -n "---> creating sym link for test-4.cc : "
+ln -sf ../$MULTI_THREADING_DIR/$FILE_6 $FILE_6 && eval $OK_MSG
+
+# TODO: update echos with filename-variable
