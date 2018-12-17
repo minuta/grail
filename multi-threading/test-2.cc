@@ -1,8 +1,8 @@
 /*
- * this test creates some threads and prints thread IDs to STDOUT
- * in particular it triggers the system call clone
+ * test: testing multiple threads : main thread and three additional threads
  *
- * here are multiple threads : Main thread and three child threads w.l.o.g 
+ * this program creates some threads and prints thread IDs to STDOUT
+ * in particular it triggers the system call clone
  */
 
 #include <iostream>
