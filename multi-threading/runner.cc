@@ -28,7 +28,7 @@ const std::string CMD_ARG_APP_HELP_STD {"binary application to run on the node "
 
 NS_LOG_COMPONENT_DEFINE ("Runner");
 
-bool enableDefaultApp = true;
+bool enableDefaultApp = false;
 
 
 int main (int argc, char *argv[])
