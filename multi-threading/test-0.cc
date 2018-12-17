@@ -1,7 +1,6 @@
 /*
- * this test is useful to test a plain program termination
+ * test : testing a plain program termination without multi-threading
  */
-
 
 #include <iostream>
 
