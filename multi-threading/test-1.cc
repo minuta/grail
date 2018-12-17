@@ -1,5 +1,7 @@
 /*
- * test: testing only two threads : main thread and one additional thread
+ * test: 
+ *       - testing only two threads : main thread and one additional thread
+ *       - thread-function contains only one statement
  *
  * this program creates some threads and prints thread IDs to STDOUT
  * in particular it triggers the system call clone
@@ -10,7 +12,7 @@
 
 const int NUM_OF_THREADS {1};
 
-void *sayHi(void *threadId){
+void *threadFunction(void *threadId){
     auto msg = "------> hello from THREAD #" + std::to_string(long(threadId)) + "\n";
     std::cout << msg;
     // std::cout << "------> hello from THREAD #" << long(threadId) << std::endl;
@@ -27,7 +29,7 @@ int main(int argc, char const *argv[])
 
     for(size_t i = 1; i < NUM_OF_THREADS+1; i++){
         std::cout << ">>> creating THREAD #" << i << std::endl;
-        int threadCreateStatus = pthread_create (&threads[i], NULL, sayHi, (void *)i);
+        int threadCreateStatus = pthread_create (&threads[i], NULL, threadFunction, (void *)i);
 
         
         if (threadCreateStatus) {

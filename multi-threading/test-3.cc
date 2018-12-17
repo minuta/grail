@@ -1,7 +1,8 @@
 /*
  * test: 
  *       - testing multiple threads : main thread and three additional threads
- *       - thread-function contains only one statement
+ *       - testing execution of multiple statements in the thread-function
+ * 
  *
  * this program creates some threads and prints thread IDs to STDOUT
  * in particular it triggers the system call clone
@@ -11,10 +12,13 @@
 #include <pthread.h>
 
 const int NUM_OF_THREADS {3};
+const int NUM_OF_LOOPS_IN_THREAD {2};
 
 void *threadFunction(void *threadId){
-    auto msg = "------> hello from THREAD #" + std::to_string(long(threadId)) + "\n";
-    std::cout << msg;
+    for (int i=1; i<=NUM_OF_LOOPS_IN_THREAD; i++){
+        auto msg = "------> THREAD #" + std::to_string(long(threadId)) + ": hello " + std::to_string(i) + "\n";
+        std::cout << msg;
+    }
     // std::cout << "------> hello from THREAD #" << long(threadId) << std::endl;
     pthread_exit(NULL); 
 }
