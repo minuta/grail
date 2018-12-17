@@ -2233,8 +2233,14 @@ struct GrailApplication::Priv
                  //" val3" << val2 );
 
     if (futex_op == FUTEX_WAIT || futex_op == FUTEX_WAIT_PRIVATE){      
-        FAKE(0);
-        return SYSC_SUCCESS;
+        if (my_uaddr == val){
+            FAKE(0);
+            return SYSC_SUCCESS;
+        }
+        //else {
+            //FAKE(EAGAIN);
+            //return SYSC_SUCCESS;
+        //}
     } 
 
     return HandleSyscallAfter();
