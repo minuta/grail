@@ -1,8 +1,0 @@
-def build(bld):
-    obj = bld.create_ns3_program('runner', ['core', 'grail'])
-    obj.source = 'runner.cc'
-
-    obj = bld.create_ns3_program('trigger-sc-clone', ['core', 'grail'])
-    obj.source = 'trigger-sc-clone.cc'
-
-
