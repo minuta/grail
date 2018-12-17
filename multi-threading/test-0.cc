@@ -1,3 +1,8 @@
+/*
+ * this test is useful to test a plain program termination
+ */
+
+
 #include <iostream>
 
 int main(){
