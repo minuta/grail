@@ -11,21 +11,20 @@
 
 #include <iostream>
 #include <pthread.h>
-#include <unistd.h>
-//#include <chrono>
-//#include <thread>
+//#include <unistd.h>
+#include <chrono>
+#include <thread>
 
 const int NUM_OF_THREADS {3};
-const int NUM_OF_LOOPS_IN_THREAD {2};
+const int NUM_OF_LOOPS_IN_THREAD {50};
 
 void *threadFunction(void *threadId){
     for (int i=1; i<=NUM_OF_LOOPS_IN_THREAD; i++){
         auto msg = "------> THREAD #" + std::to_string(long(threadId)) + ": hello " + std::to_string(i) + "\n";
         std::cout << msg;
-        //std::this_thread::sleep_for(std::chrono::milliseconds(x));
-        sleep (2);
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        //sleep (1);
     }
-    // std::cout << "------> hello from THREAD #" << long(threadId) << std::endl;
     pthread_exit(NULL); 
 }
 
