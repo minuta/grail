@@ -1536,7 +1536,7 @@ struct GrailApplication::Priv
   // int select(int nfds, fd_set *readfds, fd_set *writefds,
   //            fd_set *exceptfds, struct timeval *timeout);
   SyscallHandlerStatusCode HandleSelect()
-  {
+{
     int nfds;
     fd_set *readfds;
     fd_set *writefds;
@@ -1683,6 +1683,7 @@ struct GrailApplication::Priv
           // listen state which may receive a connection
           NS_LOG_LOGIC(pid << " [" << Simulator::Now().GetSeconds() << "s] " << "...setting due to listen state!");
           int fdnr = kv.first;
+          pid_t saved_pid = pid;
           // default fake accept handler
           std::function<void(Ptr<Socket>, const Address&)> defaultFakeAccept
             = [this,fdnr](Ptr<Socket> newSock, const  Address& newAddr) {
@@ -1691,23 +1692,14 @@ struct GrailApplication::Priv
           
           // select fake accept handler
           std::function<void(Ptr<Socket>, const Address&)> fakeAccept = \
-            [this,readfds,writefds,exceptfds,fdnr,already_handled,timeout_event,defaultFakeAccept] \
-            (Ptr<Socket> newSock, const  Address& newAddr)
-            {
-              // needed precaution if multiple sockets receive at same time (possible with ns3)
-              if(*already_handled) return;
-              };
-          
-          // select fake accept handler
-          std::function<void(Ptr<Socket>, const Address&)> fakeAccept = \
-            [this,readfds,writefds,exceptfds,fdnr,already_handled,timeout_event,defaultFakeAccept] \
+            [this,readfds,writefds,exceptfds,fdnr,already_handled,timeout_event,defaultFakeAccept, saved_pid] \
             (Ptr<Socket> newSock, const  Address& newAddr)
             {
               // needed precaution if multiple sockets receive at same time (possible with ns3)
               if(*already_handled) return;
               *already_handled = true;
               timeout_event->Cancel();
-              NS_LOG_LOGIC(pid << " [" << Simulator::Now().GetSeconds() << "s] " << "read(listening) fd ready");
+              NS_LOG_LOGIC(saved_pid << " [" << Simulator::Now().GetSeconds() << "s] " << "read(listening) fd ready");
               
               
               
@@ -1725,23 +1717,6 @@ struct GrailApplication::Priv
               do {
                 fd_set newreadfds;
                 fd_set newwritefds;
-              // needed precaution if multiple sockets receive at same time (possible with ns3)
-              if(*already_handled) return;
-              *already_handled = true;
-              timeout_event->Cancel();
-              NS_LOG_LOGIC(pid << " [" << Simulator::Now().GetSeconds() << "s] " << "read(listening) fd ready");
-              
-              
-              
-              m_fakeAcceptedSockets[fdnr] = std::make_tuple(newSock,newAddr);
-              // restore default callback handling
-              m_sockets.at(fdnr)->SetAcceptCallback(
-                                                    MakeNullCallback<bool,Ptr<Socket>,const Address&>(),
-                                                    MakeFunctionCallback(defaultFakeAccept));
-              SyscallHandlerStatusCode res = SYSC_SUCCESS;
-              do {
-                fd_set newreadfds;
-                fd_set newwritefds;
                 fd_set newexceptfds;
                 FD_ZERO(&newreadfds);
                 FD_ZERO(&newwritefds);
@@ -1754,9 +1729,7 @@ struct GrailApplication::Priv
                 StoreToTracee(saved_pid, &newexceptfds, exceptfds);
                 FAKE4(1);
               } while(false);
-              ProcessStatusCode(res, SYS_select, pid);
-            };
-          
+              ProcessStatusCode(res, SYS_select, saved_pid);
             };
           
             NS_LOG_LOGIC(pid << " [" << Simulator::Now().GetSeconds() << "s] " << "setting new accept callback");
@@ -1764,14 +1737,15 @@ struct GrailApplication::Priv
                                          MakeFunctionCallback(fakeAccept));
             does_block = true;
         } else if(may_block) {
+          pid_t saved_pid = pid;
           int fdnr = kv.first;
-          std::function<void(Ptr<Socket>)> g = [this,readfds,writefds,exceptfds,fdnr,already_handled,timeout_event] \
+          std::function<void(Ptr<Socket>)> g = [this,readfds,writefds,exceptfds,fdnr,already_handled,timeout_event, saved_pid] \
             (Ptr<Socket> sock) {
                                                  // needed precaution if multiple sockets receive at same time (possible with ns3)
                                                  if(*already_handled) return;
                                                  *already_handled = true;
                                                  timeout_event->Cancel();
-                                                 NS_LOG_LOGIC(pid << " [" << Simulator::Now().GetSeconds() << "s] " << "read fd ready");
+                                                 NS_LOG_LOGIC(saved_pid << " [" << Simulator::Now().GetSeconds() << "s] " << "read fd ready");
 
                                                  SyscallHandlerStatusCode res = SYSC_SUCCESS;
                                                  do {
@@ -1784,12 +1758,12 @@ struct GrailApplication::Priv
 
                                                    FD_SET(fdnr, &newreadfds);
 
-                                                   StoreToTracee(pid, &newreadfds,   readfds);
-                                                   StoreToTracee(pid, &newwritefds,  writefds);
-                                                   StoreToTracee(pid, &newexceptfds, exceptfds);
+                                                   StoreToTracee(saved_pid, &newreadfds,   readfds);
+                                                   StoreToTracee(saved_pid, &newwritefds,  writefds);
+                                                   StoreToTracee(saved_pid, &newexceptfds, exceptfds);
                                                    FAKE2(1);
                                                  } while(false);
-                                                 ProcessStatusCode(res, SYS_select);
+                                                 ProcessStatusCode(res, SYS_select, saved_pid);
                                                  sock->SetRecvCallback(MakeNullCallback<void,Ptr<Socket>>());
                                                };
             
@@ -1887,6 +1861,7 @@ struct GrailApplication::Priv
     FAKE(ctx);
     return SYSC_SUCCESS;
   }
+  
   
 
   // ssize_t recvmsg(int socket, struct msghdr *message, int flags);
