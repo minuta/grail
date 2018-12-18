@@ -38,3 +38,14 @@ testOlsrExample:
   - ./waf --run 'grail-olsr-example --n=9 --transientPhase=30 --measurePhase=30 --pcap=true --enablePreloading=true' && echo "confirmed; executed gRaIL /w OLSR (2/2)"
   - sha256sum grail-olsr-example-wlan-*.pcap > run2.sha256
   - diff run1.sha256 run2.sha256 && echo "confirmed; no difference between consecutive runs, great."
+
+testIperfExample:
+ stage: test
+ image: $CONTAINER_IMAGE:latest
+ script:
+  - cd /root/ns-3.29
+  - ./waf --run 'grail-iperf-example --enablePreloading=true --pcap=true'
+  - sha256sum *.pcap > run1.sha256
+  - ./waf --run 'grail-iperf-example --enablePreloading=true --pcap=true'
+  - sha256sum *.pcap > run2.sha256
+  - diff run1.sha256 run2.sha256 && echo "confirmed; no difference between consecutive runs, great."

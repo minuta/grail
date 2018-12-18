@@ -14,7 +14,8 @@
 
 namespace ns3 {
 
-class GrailApplication : public ns3::Application {
+  class GrailApplication : public ns3::Application
+  {
   public:
     GrailApplication ();
     virtual ~GrailApplication ();
@@ -31,11 +32,12 @@ class GrailApplication : public ns3::Application {
     bool m_mayQuit; 
     bool m_enablePreloading; 
     Time m_syscallProcessingTime;
-
+    bool m_pollLoopDetection;
+    
     struct Priv;
     std::shared_ptr<Priv> p;
   };
-
+  
   static inline std::string ns3AddressToString(const InetSocketAddress& addr) {
     std::stringstream ss;
     addr.GetIpv4().Print(ss);

@@ -7,6 +7,7 @@
 #include "ptrace-utils.h"
 #include "netlink.h"
 #include "syscname.h"
+#include "poll-detector.h"
 
 #include <bits/types.h>
 #include <sys/ptrace.h>
@@ -54,6 +55,7 @@
 #include "ns3/random-variable-stream.h"
 #include "ns3/wifi-net-device.h"
 #include "ns3/point-to-point-net-device.h"
+#include "ns3/tcp-socket-base.h"
 
 #ifndef __amd64__
 #error "As of now, the gRaIL implementation only supports the amd64 platform"
@@ -102,6 +104,11 @@ GrailApplication::GetTypeId (void)
                    TimeValue (NanoSeconds(0)),
                    MakeTimeAccessor (&GrailApplication::m_syscallProcessingTime),
                    MakeTimeChecker ())
+    .AddAttribute ("PollLoopDetection",
+                   "Use a detection heuristic and backoff strategy for poll loops.",
+                   BooleanValue (true),
+                   MakeBooleanAccessor (&GrailApplication::m_pollLoopDetection),
+                   MakeBooleanChecker ())
   ;
   return tid;
 }
@@ -137,11 +144,14 @@ struct GrailApplication::Priv
   std::set<int> m_nonblocking_sockets;
   std::set<int> m_random_fds;
   std::map<int,std::shared_ptr<NetlinkSocket> > m_netlinks;
-  int socket_fd_count = 1000;
+  int socket_fd_count = 100;
   
   // used for alarm(2)
   EventId alarmEvent;
   Time    alarmTime;
+
+  // temporary variable used for poll loop delay 
+  PollLoopDetector<SimpleGettimeofdaySelectLoopDetector, ExponentialBackoffStrategy> pollLoopDetector;
   
   int DoTrace();
   
@@ -154,13 +164,11 @@ struct GrailApplication::Priv
       // useful when calling callback directly, see e.g. HandleRecvFrom
     } else if(res == SYSC_SUCCESS) {
       NS_LOG_LOGIC(pid << ": [EE] [" << Simulator::Now().GetSeconds() << "s] emulated function succeeded, rr; syscall: " << syscname(syscall));
-      Simulator::Schedule(app->m_syscallProcessingTime, &Priv::HandleSyscallBefore, this, pid);       // re-schedule method HandleSyscallBefore 
-      //Simulator::Schedule(app->m_syscallProcessingTime, &Priv::HandleSyscallBefore, this);       // re-schedule method HandleSyscallBefore 
+      Simulator::Schedule(app->m_syscallProcessingTime + pollLoopDetector.GetDelay(), &Priv::HandleSyscallBefore, this, pid);
       return;
     } else if(res == SYSC_FAILURE) {
       NS_LOG_LOGIC(pid << ": [EE] emulated function failed, rr; syscall: " << syscname(syscall));
-      Simulator::Schedule(app->m_syscallProcessingTime, &Priv::HandleSyscallBefore, this, pid);
-      //Simulator::Schedule(app->m_syscallProcessingTime, &Priv::HandleSyscallBefore, this);
+      Simulator::Schedule(app->m_syscallProcessingTime + pollLoopDetector.GetDelay(), &Priv::HandleSyscallBefore, this, pid);
       return;
     } else if(res == SYSC_ERROR) {
       NS_LOG_ERROR(pid << ": [EE] emulated function crashed, syscall: " << syscname(syscall));
@@ -197,6 +205,13 @@ struct GrailApplication::Priv
     int syscall = get_reg(pid, orig_rax);      // getting syscall ID from register rax
     NS_LOG_LOGIC(pid << ": [EE] [" << Simulator::Now().GetSeconds() << "s] caught syscall: " << syscname(syscall));
 
+    if(app->m_pollLoopDetection) {
+      Time t = pollLoopDetector.HandleSystemCall(pid, syscall);
+      if ( t > Seconds(0) ) {
+        NS_LOG_LOGIC(pid << ": [EE] [" << Simulator::Now().GetSeconds() << "s] poll loop detected, current delay: " << t);
+      }
+    }
+
     SyscallHandlerStatusCode res;
     
     switch(syscall) {
@@ -217,6 +232,7 @@ struct GrailApplication::Priv
     case SYS_readahead:
     case SYS_umask:
     case SYS_ftruncate:
+    case SYS_readlink:
 
       // needs further research (likely harmless to ignore):
     case SYS_prlimit64:
@@ -697,8 +713,17 @@ struct GrailApplication::Priv
       // pass through
       return HandleSyscallAfter();
     } else if(m_sockets.find(fd) != m_sockets.end()) {
-      m_sockets.at(fd)->Close();
+      Ptr<Socket> sock = m_sockets.at(fd);
+      sock->Close();
       m_sockets.erase(fd);
+      // we must delay the deletion of the socket, since the DataSent callback may fail otherwise
+      // the constant delay of one second likely has a large safety margin
+      std::function<void()> removeClosedSocket = [sock]()
+                                                 {
+                                                   sock->Close(); // close again to avoid compiler optimizations
+                                                   return;
+                                                 };
+      Simulator::Schedule(Seconds(1.0), MakeFunctionalEvent(removeClosedSocket));
       FAKE(0);
       return SYSC_SUCCESS;
     } else if(m_netlinks.find(fd) != m_netlinks.end()) {
@@ -1158,15 +1183,31 @@ struct GrailApplication::Priv
       FAKE(-EOPNOTSUPP);
       return SYSC_FAILURE;
     }
+    if(m_isListenTcpSocket.count(sockfd)) {
+      FAKE(-EOPNOTSUPP);
+      return SYSC_FAILURE;
+    }
 
     int ret = m_sockets.at(sockfd)->Listen();
     m_isListenTcpSocket.insert(sockfd);
     FAKE(ret);
     if(ret != 0) {
       return SYSC_FAILURE;
-    } else {
-      return SYSC_SUCCESS;
     }
+
+
+    NS_LOG_WARN(pid << ": [EE] listen(2): socket: " << sockfd << "");
+
+    // register default fake accept handler
+    std::function<void(Ptr<Socket>, const Address&)> fakeAccept
+      = [this,sockfd](Ptr<Socket> newSock, const  Address& newAddr) {
+          m_fakeAcceptedSockets[sockfd] = std::make_tuple(newSock, newAddr);
+        };
+    
+    m_sockets.at(sockfd)->SetAcceptCallback(MakeNullCallback<bool,Ptr<Socket>,const Address&>(),
+                                            MakeFunctionCallback(fakeAccept));
+    
+    return SYSC_SUCCESS;
   }
 
   //int connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
@@ -1468,9 +1509,11 @@ struct GrailApplication::Priv
       void* _buf = malloc(ALIGN(len));
       MemcpyFromTracee(pid, _buf,buf,len);
 
-      std::shared_ptr<Address> ns3addr = GetNs3Address(dest_addr,addrlen);
-      if(!ns3addr) {
-        return SYSC_ERROR;
+      std::shared_ptr<Address> ns3addr;
+      if(dest_addr) {
+        ns3addr = GetNs3Address(dest_addr,addrlen);
+      } else {
+        ns3addr = std::make_shared<Address>();
       }
     
       Ptr<Socket> socket = m_sockets.at(sockfd);
@@ -1543,6 +1586,11 @@ struct GrailApplication::Priv
         }
         if(readfds && FD_ISSET(kv.first,&myreadfds) && kv.second->GetRxAvailable()) {
           NS_LOG_LOGIC(pid << " [" << Simulator::Now().GetSeconds() << "s] " << "pre-analysis found data in: " << kv.first);
+          has_data = true;
+          goto has_data;
+        }
+        if(readfds && FD_ISSET(kv.first,&myreadfds) && m_fakeAcceptedSockets.count(kv.first)) {
+          NS_LOG_LOGIC(pid << " [" << Simulator::Now().GetSeconds() << "s] " << "pre-analysis found fake accepted connection in: " << kv.first);
           has_data = true;
           goto has_data;
         }
@@ -1620,64 +1668,76 @@ struct GrailApplication::Priv
       if(readfds && FD_ISSET(kv.first,&myreadfds)) {
         NS_LOG_LOGIC(pid << " [" << Simulator::Now().GetSeconds() << "s] " << "read fds set!");
         if(kv.second->GetRxAvailable()) {
+          // data to read available:
           NS_LOG_LOGIC(pid << " [" << Simulator::Now().GetSeconds() << "s] " << "...setting!");
           FD_SET(kv.first, &newreadfds);
           may_block = false;
           ++ctx;
-        } else {
-          if(may_block && m_isListenTcpSocket.count(kv.first)) {
-            int fdnr = kv.first;
-            pid_t saved_pid = pid;
-            std::function<void(Ptr<Socket>, const Address&)> fakeAccept = \
-              [this,readfds,writefds,exceptfds,fdnr,already_handled,timeout_event, saved_pid]  \
-              (Ptr<Socket> newSock, const  Address& newAddr)
-              {
-                // needed precaution if multiple sockets receive at same time (possible with ns3)
-                if(*already_handled) return;
-                *already_handled = true;
-                timeout_event->Cancel();
-                NS_LOG_LOGIC(saved_pid << " [" << Simulator::Now().GetSeconds() << "s] " << "read(listening) fd ready");
-                
-                m_fakeAcceptedSockets[fdnr] = std::make_tuple(newSock,newAddr);
-                m_sockets.at(fdnr)->SetAcceptCallback(
-                             MakeNullCallback<bool,Ptr<Socket>,const Address&>(),
-                             MakeNullCallback<void,Ptr<Socket>,const Address&>());
-                
-                SyscallHandlerStatusCode res = SYSC_SUCCESS;
-                do {
-                  fd_set newreadfds;
-                  fd_set newwritefds;
-                  fd_set newexceptfds;
-                  FD_ZERO(&newreadfds);
-                  FD_ZERO(&newwritefds);
-                  FD_ZERO(&newexceptfds);
-
-                  FD_SET(fdnr, &newreadfds);
-
-                  StoreToTracee(saved_pid, &newreadfds,   readfds);
-                  StoreToTracee(saved_pid, &newwritefds,  writefds);
-                  StoreToTracee(saved_pid, &newexceptfds, exceptfds);
-                  FAKE4(1);
-                } while(false);
-                ProcessStatusCode(res, SYS_select, saved_pid);
+        } else if(m_fakeAcceptedSockets.count(kv.first)) {
+          // already accepted connection:
+            NS_LOG_LOGIC(pid << " [" << Simulator::Now().GetSeconds() << "s] " << "...setting due to fake accept!");
+            FD_SET(kv.first, &newreadfds);
+            may_block = false;
+            ++ctx;
+        } else if(may_block && m_isListenTcpSocket.count(kv.first)) {
+          // listen state which may receive a connection
+          NS_LOG_LOGIC(pid << " [" << Simulator::Now().GetSeconds() << "s] " << "...setting due to listen state!");
+          int fdnr = kv.first;
+          // default fake accept handler
+          std::function<void(Ptr<Socket>, const Address&)> defaultFakeAccept
+            = [this,fdnr](Ptr<Socket> newSock, const  Address& newAddr) {
+                m_fakeAcceptedSockets[fdnr] = std::make_tuple(newSock, newAddr);
               };
-
-            NS_LOG_LOGIC(pid << " [" << Simulator::Now().GetSeconds() << "s] " << "setting new accept callback");
-            kv.second->SetAcceptCallback(MakeNullCallback<bool,Ptr<Socket>,const Address&>(),
-                                         MakeFunctionCallback(fakeAccept));
-            does_block = true;
-          }
-          else if(may_block) {
-            int fdnr = kv.first;
-            pid_t saved_pid = pid;
-            std::function<void(Ptr<Socket>)> g = [this,readfds,writefds,exceptfds,fdnr,already_handled,timeout_event, saved_pid] \
-              (Ptr<Socket> sock) {
+          
+          // select fake accept handler
+          std::function<void(Ptr<Socket>, const Address&)> fakeAccept = \
+            [this,readfds,writefds,exceptfds,fdnr,already_handled,timeout_event,defaultFakeAccept] \
+            (Ptr<Socket> newSock, const  Address& newAddr)
+            {
+              // needed precaution if multiple sockets receive at same time (possible with ns3)
+              if(*already_handled) return;
+              };
+          
+          // select fake accept handler
+          std::function<void(Ptr<Socket>, const Address&)> fakeAccept = \
+            [this,readfds,writefds,exceptfds,fdnr,already_handled,timeout_event,defaultFakeAccept] \
+            (Ptr<Socket> newSock, const  Address& newAddr)
+            {
               // needed precaution if multiple sockets receive at same time (possible with ns3)
               if(*already_handled) return;
               *already_handled = true;
               timeout_event->Cancel();
-              NS_LOG_LOGIC(saved_pid << " [" << Simulator::Now().GetSeconds() << "s] " << "read fd ready");
-
+              NS_LOG_LOGIC(pid << " [" << Simulator::Now().GetSeconds() << "s] " << "read(listening) fd ready");
+              
+              
+              
+              m_fakeAcceptedSockets[fdnr] = std::make_tuple(newSock,newAddr);
+              // restore default callback handling
+              m_sockets.at(fdnr)->SetAcceptCallback(
+                                                    MakeNullCallback<bool,Ptr<Socket>,const Address&>(),
+                                                    MakeFunctionCallback(defaultFakeAccept));
+              
+              m_sockets.at(fdnr)->SetAcceptCallback(
+                                                    MakeNullCallback<bool,Ptr<Socket>,const Address&>(),
+                                                    MakeNullCallback<void,Ptr<Socket>,const Address&>());
+              
+              SyscallHandlerStatusCode res = SYSC_SUCCESS;
+              do {
+                fd_set newreadfds;
+                fd_set newwritefds;
+              // needed precaution if multiple sockets receive at same time (possible with ns3)
+              if(*already_handled) return;
+              *already_handled = true;
+              timeout_event->Cancel();
+              NS_LOG_LOGIC(pid << " [" << Simulator::Now().GetSeconds() << "s] " << "read(listening) fd ready");
+              
+              
+              
+              m_fakeAcceptedSockets[fdnr] = std::make_tuple(newSock,newAddr);
+              // restore default callback handling
+              m_sockets.at(fdnr)->SetAcceptCallback(
+                                                    MakeNullCallback<bool,Ptr<Socket>,const Address&>(),
+                                                    MakeFunctionCallback(defaultFakeAccept));
               SyscallHandlerStatusCode res = SYSC_SUCCESS;
               do {
                 fd_set newreadfds;
@@ -1695,20 +1755,54 @@ struct GrailApplication::Priv
                 FAKE4(1);
               } while(false);
               ProcessStatusCode(res, SYS_select, pid);
-              sock->SetRecvCallback(MakeNullCallback<void,Ptr<Socket>>());
             };
-            
-            NS_LOG_LOGIC(pid << " [" << Simulator::Now().GetSeconds() << "s] " << "setting new recv callback");
-            kv.second->SetRecvCallback(MakeFunctionCallback(g));
+          
+            };
+          
+            NS_LOG_LOGIC(pid << " [" << Simulator::Now().GetSeconds() << "s] " << "setting new accept callback");
+            kv.second->SetAcceptCallback(MakeNullCallback<bool,Ptr<Socket>,const Address&>(),
+                                         MakeFunctionCallback(fakeAccept));
             does_block = true;
-          }
-          else {
-            // non blocking and no data available: do nothing
-          }
+        } else if(may_block) {
+          int fdnr = kv.first;
+          std::function<void(Ptr<Socket>)> g = [this,readfds,writefds,exceptfds,fdnr,already_handled,timeout_event] \
+            (Ptr<Socket> sock) {
+                                                 // needed precaution if multiple sockets receive at same time (possible with ns3)
+                                                 if(*already_handled) return;
+                                                 *already_handled = true;
+                                                 timeout_event->Cancel();
+                                                 NS_LOG_LOGIC(pid << " [" << Simulator::Now().GetSeconds() << "s] " << "read fd ready");
+
+                                                 SyscallHandlerStatusCode res = SYSC_SUCCESS;
+                                                 do {
+                                                   fd_set newreadfds;
+                                                   fd_set newwritefds;
+                                                   fd_set newexceptfds;
+                                                   FD_ZERO(&newreadfds);
+                                                   FD_ZERO(&newwritefds);
+                                                   FD_ZERO(&newexceptfds);
+
+                                                   FD_SET(fdnr, &newreadfds);
+
+                                                   StoreToTracee(pid, &newreadfds,   readfds);
+                                                   StoreToTracee(pid, &newwritefds,  writefds);
+                                                   StoreToTracee(pid, &newexceptfds, exceptfds);
+                                                   FAKE2(1);
+                                                 } while(false);
+                                                 ProcessStatusCode(res, SYS_select);
+                                                 sock->SetRecvCallback(MakeNullCallback<void,Ptr<Socket>>());
+                                               };
+            
+          NS_LOG_LOGIC(pid << " [" << Simulator::Now().GetSeconds() << "s] " << "setting new recv callback");
+          kv.second->SetRecvCallback(MakeFunctionCallback(g));
+          does_block = true;
+        } else {
+          // non blocking and no data available: do nothing
         }
       }
     }
     for(auto& kv : m_netlinks) {
+      NS_LOG_LOGIC(pid << " [" << Simulator::Now().GetSeconds() << "s] " << "processing netlink socket: " << kv.first);
       if(readfds && FD_ISSET(kv.first,&myreadfds)) {
         if(kv.second->HasData()) {
           FD_SET(kv.first, &newreadfds);
@@ -1843,14 +1937,14 @@ struct GrailApplication::Priv
     int flags;
     
     read_args(pid, socket, message, flags);
-
+    
     if(m_netlinks.find(socket) == m_netlinks.end()) {
       NS_ASSERT(false && "UNIMPLEMENTED");
     }
-
+    
     return m_netlinks.at(socket)->HandleSendMsg(socket, message, flags);
   }
-
+  
   // int accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
   SyscallHandlerStatusCode HandleAccept()
   {
@@ -1858,16 +1952,17 @@ struct GrailApplication::Priv
     struct sockaddr *addr;
     socklen_t *addrlen;
     read_args(pid, sockfd, addr, addrlen);
-
+    
     NS_ASSERT(FdIsEmulatedSocket(sockfd) && m_isListenTcpSocket.count(sockfd));
-
+    
     // todo: handle blocking question
     // bool dont_block = m_nonblocking_sockets.count(sockfd);
-    bool already_fake_accepted = m_fakeAcceptedSockets.count(sockfd) > 0;
-
+    bool already_fake_accepted = m_fakeAcceptedSockets.count(sockfd);
+    
     if(already_fake_accepted) {
       auto ns3Sock = std::get<0>(m_fakeAcceptedSockets.at(sockfd));
       auto ns3Addr = std::get<1>(m_fakeAcceptedSockets.at(sockfd));
+      m_fakeAcceptedSockets.erase(sockfd);
       SetBsdAddress(ns3Addr, addr, addrlen);
 
       int new_socket_fd = socket_fd_count++;
@@ -1910,9 +2005,9 @@ struct GrailApplication::Priv
     }
     Ptr<Socket> ns3socket = m_sockets.at(socket);
 
-    if(flags != 0) {
-      NS_LOG_ERROR("socket flags are not supported");
-      return SYSC_ERROR;
+    if(flags != 0 && ns3socket->GetObject<TcpSocketBase>()) {
+      NS_LOG_WARN("socket flags are not supported by ns-3's TCP implementation");
+      flags = 0;
     }
 
     pid_t saved_pid = pid;

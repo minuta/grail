@@ -8,6 +8,7 @@ RUN DEBIAN_FRONTEND=noninteractive \
           libnl-3-dev \
           pkg-config \
           olsrd \
+          iperf3 \
           tcpdump \
   && rm  -rf /var/lib/apt/lists/*
 RUN git clone -c http.sslVerify=false --depth 1 --branch ns-3.29 https://github.com/nsnam/ns-3-dev-git.git /root/ns-3.29
