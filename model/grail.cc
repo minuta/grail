@@ -654,7 +654,7 @@ struct GrailApplication::Priv
             MemcpyToTracee(saved_pid, buf, _buffer, std::min(count,(size_t)rlen));
           }
 
-          FAKE2(rlen);
+          FAKE4(rlen);
           res = SYSC_SUCCESS;
         
         } while(false);
@@ -1191,12 +1191,12 @@ struct GrailApplication::Priv
       m_connectedSockets.insert(sockfd);
       
       SyscallHandlerStatusCode res = SYSC_SUCCESS;
-      FAKE2(0);
+      FAKE4(0);
       ProcessStatusCode(res, SYS_connect, saved_pid);
     };
     std::function<void(Ptr<Socket>)> failure = [this, saved_pid](Ptr<Socket> sock) {
       SyscallHandlerStatusCode res = SYSC_FAILURE;
-      FAKE2(-1);
+      FAKE4(-1);
       ProcessStatusCode(res, SYS_connect, saved_pid);
     };
     
@@ -1599,7 +1599,7 @@ struct GrailApplication::Priv
               StoreToTracee(saved_pid, &newreadfds,   readfds);
               StoreToTracee(saved_pid, &newwritefds,  writefds);
               StoreToTracee(saved_pid, &newexceptfds, exceptfds);
-              FAKE2(1);
+              FAKE4(1);
             } while(false);
             ProcessStatusCode(res, SYS_select, saved_pid);
             sock->SetSendCallback(MakeNullCallback<void,Ptr<Socket>,uint32_t>());
@@ -1657,7 +1657,7 @@ struct GrailApplication::Priv
                   StoreToTracee(saved_pid, &newreadfds,   readfds);
                   StoreToTracee(saved_pid, &newwritefds,  writefds);
                   StoreToTracee(saved_pid, &newexceptfds, exceptfds);
-                  FAKE2(1);
+                  FAKE4(1);
                 } while(false);
                 ProcessStatusCode(res, SYS_select, saved_pid);
               };
@@ -1692,7 +1692,7 @@ struct GrailApplication::Priv
                 StoreToTracee(saved_pid, &newreadfds,   readfds);
                 StoreToTracee(saved_pid, &newwritefds,  writefds);
                 StoreToTracee(saved_pid, &newexceptfds, exceptfds);
-                FAKE2(1);
+                FAKE4(1);
               } while(false);
               ProcessStatusCode(res, SYS_select, pid);
               sock->SetRecvCallback(MakeNullCallback<void,Ptr<Socket>>());
@@ -1739,7 +1739,7 @@ struct GrailApplication::Priv
               StoreToTracee(saved_pid, &newreadfds,   readfds);
               StoreToTracee(saved_pid, &newwritefds,  writefds);
               StoreToTracee(saved_pid, &newexceptfds, exceptfds);
-              FAKE2(1);
+              FAKE4(1);
             } while(false);
             ProcessStatusCode(res, SYS_select, saved_pid);
             nl_sock->UnsetRecvCallback();
@@ -1768,7 +1768,7 @@ struct GrailApplication::Priv
             //   mytimeoutl.tv_sec = mytimeoutl.tv_usec = 0;
             //   StoreToTracee(pid, &mytimeoutl, timeout);
             // }
-            FAKE2(0);
+            FAKE4(0);
           } while(0);
           ProcessStatusCode(res, SYS_select, saved_pid);
         };
@@ -1936,7 +1936,7 @@ struct GrailApplication::Priv
           MemcpyToTracee(saved_pid, buffer, _buffer, std::min(length,(size_t)rlen));
         }
 
-        FAKE2(rlen);
+        FAKE4(rlen);
         res = SYSC_SUCCESS;
         
       } while(false);
@@ -1980,7 +1980,7 @@ struct GrailApplication::Priv
     std::function<void()> cb = [this, saved_pid](){             // this function wrapper will be used for re-scheduling 
       SyscallHandlerStatusCode res = SYSC_SUCCESS;
       do {
-        FAKE2(0);
+        FAKE4(0);
       } while(0);
       ProcessStatusCode(res, SYS_nanosleep, saved_pid);
     };

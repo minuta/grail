@@ -62,6 +62,21 @@ enum SyscallHandlerStatusCode {
     NS_LOG_LOGIC(pid << ": [EE] FAKE syscall returned: " << ret_val);   \
   } while(0)
 
+
+// this variation of the FAKE method should be used outside the function.
+// Used for callbacks with saved_pid
+#define FAKE4(ret_val) do {                                                   \
+    set_reg(saved_pid, orig_rax, SYS_getpid);                                 \
+    if (WaitForSyscall(saved_pid) != 0) {                                     \
+      res = SYSC_ERROR;                                                       \
+      break;                                                                  \
+    }                                                                         \
+    set_reg(saved_pid, rax, ret_val);                                         \
+    NS_LOG_LOGIC(saved_pid << ": [EE] FAKE syscall returned: " << ret_val);   \
+  } while(0)
+
+
+
 // Aligns the supplied size to the specified PowerOfTwo
 #define ALIGN_SIZE( sizeToAlign, PowerOfTwo )       \
   (((sizeToAlign) + (PowerOfTwo) - 1) & ~((PowerOfTwo) - 1))
