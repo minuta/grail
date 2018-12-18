@@ -24,6 +24,9 @@ Configuration:
 using namespace ns3;
 
 const unsigned short int SECOND_NODE {1};
+std::string HOME_DIR = "/home/qp/Projects/";
+std::string APP_TO_RUN = HOME_DIR + "ns-3.29/build/scratch/test-3";
+
 const std::string CMD_ARG_APP_HELP_STD {"binary application to run on the node " + std::to_string(SECOND_NODE) };
 
 NS_LOG_COMPONENT_DEFINE ("Runner");
@@ -31,21 +34,14 @@ NS_LOG_COMPONENT_DEFINE ("Runner");
 bool enableDefaultApp = true;
 
 
+
 int main (int argc, char *argv[])
 {
 
-  std::string HOME_DIR;
-  std::string APP_TO_RUN;
   std::string appToRun;
 
   if (enableDefaultApp){
-    HOME_DIR = "/home/qp/Projects/";
-    //APP_TO_RUN = HOME_DIR + "bluepill_application_loader/build/scratch/trigger-sc-clone";
-    //APP_TO_RUN = HOME_DIR + "syscall-trigger/time";
-    APP_TO_RUN = HOME_DIR + "ns-3.29/build/scratch/test-3";
-
     appToRun = APP_TO_RUN;
-    // TODO: make a method from this block
   }
 
   CommandLine cmd;
