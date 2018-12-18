@@ -4,7 +4,7 @@
 # so that particulary WAF can notice presence of appropriate files in the multi-threading folder
 
 OK_MSG="tput setaf 2; echo "OK"; tput sgr 0"
-MULTI_THREADING_DIR=src/grail/multi-threading
+MULTI_THREADING_DIR=src/grail/mt
 FILE_1=hl.sh
 FILE_2=runner.cc
 
