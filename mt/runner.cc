@@ -25,7 +25,7 @@ using namespace ns3;
 
 const unsigned short int SECOND_NODE {1};
 std::string HOME_DIR = "/home/qp/Projects/";
-std::string APP_TO_RUN = HOME_DIR + "ns-3.29/build/scratch/test-3";
+std::string APP_TO_RUN = HOME_DIR + "ns-3.29/src/grail/mt/test-3";
 
 const std::string CMD_ARG_APP_HELP_STD {"binary application to run on the node " + std::to_string(SECOND_NODE) };
 
