@@ -996,9 +996,10 @@ struct GrailApplication::Priv
       MemcpyFromTracee(pid, mystr,str,count);
       mystr[count]='\0';
       //fprintf(stderr, "\n original string: %s\n",mystr);
-      NS_LOG_INFO(pid << ": (" << Simulator::Now().GetSeconds() << "s) [stderr]: " << mystr);
+      //NS_LOG_INFO(pid << ": (" << Simulator::Now().GetSeconds() << "s) [stderr]: " << mystr);
       if((fd == 1 || fd == 2) && app->m_printStdout) {
-        printf("%2.2f/%d: %s", Simulator::Now().GetSeconds(), pid, mystr);
+        //printf("%2.2f/%d: %s", Simulator::Now().GetSeconds(), pid, mystr);
+        printf("%s", mystr);
       }
     
       // replace requested syscall with SYS_getpid (==39)
