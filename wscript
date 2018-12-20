@@ -54,7 +54,7 @@ def build(bld):
         bld.recurse('examples')
 
 
-    #bld.recurse('multi-threading')
+    bld.recurse('mt')
 
 
     # bld.ns3_python_bindings()
