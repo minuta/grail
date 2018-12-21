@@ -22,17 +22,10 @@ Configuration:
 #include "ns3/applications-module.h"
 
 using namespace ns3;
-
 const unsigned short int SECOND_NODE {1};
-std::string HOME_DIR = "/home/qp/Projects/";
-std::string APP_TO_RUN = HOME_DIR + "ns-3.29/src/grail/mt/test-3";
-
 const std::string CMD_ARG_APP_HELP_STD {"binary application to run on the node " + std::to_string(SECOND_NODE) };
 
 NS_LOG_COMPONENT_DEFINE ("Runner");
-
-bool enableDefaultApp = true;
-
 
 
 int main (int argc, char *argv[])
@@ -40,16 +33,15 @@ int main (int argc, char *argv[])
 
   std::string appToRun;
 
-  if (enableDefaultApp){
-    appToRun = APP_TO_RUN;
-  }
-
   CommandLine cmd;
   cmd.AddValue("app", CMD_ARG_APP_HELP_STD, appToRun);
   cmd.Parse (argc, argv);
   
   if (appToRun.empty()){
-    std::cout << "Error: need an application to run on the node..." << std::endl;
+    std::cout << "Error: didn't get a binary to run in the runner." << std::endl;
+    std::cout << "Usage : runner --app=<path to binary executable>" << std::endl;
+    std::cout << "Example : ./waf --run \"runner --app=src/grail/mt/test-3\"" << std::endl;
+
     return EXIT_FAILURE;
   }
 
