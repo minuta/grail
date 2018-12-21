@@ -16,7 +16,7 @@
 #include <thread>
 
 const int NUM_OF_THREADS {3};
-const int NUM_OF_LOOPS_IN_THREAD {50};
+const int NUM_OF_LOOPS_IN_THREAD {100};
 
 void *threadFunction(void *threadId){
     for (int i=1; i<=NUM_OF_LOOPS_IN_THREAD; i++){
