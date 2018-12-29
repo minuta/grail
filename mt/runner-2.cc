@@ -1,111 +1,114 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 
-/*
-NS-3 script to test Grail for working with a simple multithreaded application
-
-Configuration:
-    - 2 nodes with a PPP connection
-    - on one node is running a multithreaded application
-    - multithreaded application has a single purpose: printing some data to STDOUT (e.g. thread id)
-
-    - it's possible to define application to run in the script via a cmd argument, see --PrintHelp
-    - default value is a test application from the scratch dir
-*/
-
-#include "ns3/grail.h"
+#include "ns3/grail-module.h"
 #include "ns3/traffic-control-module.h"
 
 #include "ns3/core-module.h"
 #include "ns3/network-module.h"
 #include "ns3/internet-module.h"
 #include "ns3/point-to-point-module.h"
+#include "ns3/point-to-point-star.h"
 #include "ns3/applications-module.h"
+#include "ns3/wifi-module.h"
+#include "ns3/mobility-module.h"
+#include "ns3/olsr-module.h"
+#include "ns3/error-model.h"
+
+#include <pwd.h>
+#include <unistd.h>
+#include <sys/types.h>
+
+#include "ns3/int64x64-128.h"
+
+#include <iostream>
+#include <functional>
 
 using namespace ns3;
-const unsigned short int FIRST_NODE {0};
-const unsigned short int SECOND_NODE {1};
-const std::string CMD_ARG_APP_HELP_STD {"binary application to run on the node " + std::to_string(SECOND_NODE) };
 
-//NS_LOG_COMPONENT_DEFINE ("Runner");
-
-
-int main (int argc, char *argv[])
+int
+main (int argc, char *argv[])
 {
-
   LogComponentEnable("GrailApplication", LOG_LEVEL_ERROR);
   LogComponentEnable("GrailNetlink", LOG_LEVEL_ERROR);
+  // LogComponentEnable("GrailApplication", LOG_LEVEL_LOGIC);
+  // LogComponentEnable("GrailNetlink", LOG_LEVEL_LOGIC);
 
-  std::string appToRun;
-
+  uint32_t rngRun = 0;
+  bool pcap = false;
   bool enablePreloading = true;
-
+  DataRate rate = DataRate("1Mbps");
+  
   CommandLine cmd;
-  cmd.AddValue("app", CMD_ARG_APP_HELP_STD, appToRun);
+  cmd.AddValue("rngRun", "run-# of the PRNG", rngRun);
+  cmd.AddValue("rate", "bitrate of link", rate);
+  cmd.AddValue("pcap", "enable pcap", pcap);
+  cmd.AddValue("enablePreloading", "enable LD-preloading helper technique", enablePreloading);
   cmd.Parse (argc, argv);
   
-  if (appToRun.empty()){
-    std::cout << "Error: didn't get a binary to run in the runner." << std::endl;
-    std::cout << "Usage : runner --app=<path to binary executable>" << std::endl;
-    std::cout << "Example : ./waf --run \"runner --app=src/grail/mt/test-3\"" << std::endl;
-
-    return EXIT_FAILURE;
-  }
-
-  Time::SetResolution (Time::NS);
-
-  LogComponentEnable("GrailApplication", LOG_LEVEL_ERROR);
-  LogComponentEnable("GrailNetlink", LOG_LEVEL_ERROR);
-
-  NodeContainer nodes;
-  nodes.Create (2);
-
-  PointToPointHelper pointToPoint;
-  pointToPoint.SetDeviceAttribute ("DataRate", StringValue ("5Mbps"));
-  pointToPoint.SetChannelAttribute ("Delay", StringValue ("2ms"));
-
-  NetDeviceContainer devices;
-  devices = pointToPoint.Install (nodes);
-
-  InternetStackHelper stack;
-  stack.Install (nodes);
-
-  Ipv4AddressHelper address;
-  address.SetBase ("10.1.1.0", "255.255.255.0");
-
-  Ipv4InterfaceContainer interfaces = address.Assign (devices);
+  RngSeedManager::SetRun(rngRun);
 
   Time serverStartTime = Seconds(5.0);
   Time clientStartTime = Seconds(10.0);
+  
+  NodeContainer nodes;
+  nodes.Create(3 /* num nodes */);
+
+  Ptr<RateErrorModel> rem = CreateObject<RateErrorModel> ();
+  Ptr<UniformRandomVariable> uv = CreateObject<UniformRandomVariable> ();
+  rem->SetRandomVariable (uv);
+  rem->SetRate (1.0/rate.GetBitRate());
+  
+  PointToPointHelper pointToPoint;
+  pointToPoint.SetDeviceAttribute ("DataRate", DataRateValue(rate));
+  pointToPoint.SetDeviceAttribute ("ReceiveErrorModel", PointerValue(rem));
+  pointToPoint.SetChannelAttribute ("Delay", StringValue ("1ms"));
+  NetDeviceContainer devices0 = pointToPoint.Install(nodes.Get(0), nodes.Get(1));
+  NetDeviceContainer devices1 = pointToPoint.Install(nodes.Get(1), nodes.Get(2));
+
+  InternetStackHelper stack;
+  stack.Install (nodes);
+  Ipv4AddressHelper address;
+  address.SetBase ("10.0.1.0", "255.255.255.0");
+  Ipv4InterfaceContainer interfaces0 = address.Assign(devices0);
+  address.NewNetwork();
+  Ipv4InterfaceContainer interfaces1 = address.Assign(devices1);
 
   Ipv4GlobalRoutingHelper::PopulateRoutingTables ();
 
-   // define and place server application on the node 0
-  { 
+  ApplicationContainer serverApps, clientApps; // only used for baseline
+  { // server
     Ptr<GrailApplication> app = CreateObject<GrailApplication>();
-    app->Setup({"/usr/bin/env", "/usr/sbin/lighttpd"});
-    app->SetAttribute("PrintStdout", BooleanValue(true));
+    app->Setup({"/usr/bin/env", "iperf", "-s"});
+    app->SetAttribute("PrintStdout", BooleanValue(false));
     app->SetAttribute("SyscallProcessingTime", TimeValue(NanoSeconds(100)));
     app->SetAttribute("EnablePreloading", BooleanValue(enablePreloading));
-    app->SetAttribute("MayQuit", BooleanValue(true));
+    app->SetAttribute("MayQuit", BooleanValue(false));
     app->SetStartTime( serverStartTime );
-    nodes.Get (FIRST_NODE)->AddApplication(app);
+    nodes.Get (0)->AddApplication(app);
   }
-
-  
-  // define and place client application on the node 1
-  {
+  { // client
     Ptr<GrailApplication> app = CreateObject<GrailApplication>();
-    app->Setup({appToRun});
+    app->Setup({"/usr/bin/env", "iperf", "-c", "10.0.1.1"});
     app->SetAttribute("PrintStdout", BooleanValue(true));
     app->SetAttribute("SyscallProcessingTime", TimeValue(NanoSeconds(100)));
     app->SetAttribute("EnablePreloading", BooleanValue(enablePreloading));
     app->SetAttribute("MayQuit", BooleanValue(true));
     app->SetStartTime( clientStartTime );
-    nodes.Get (SECOND_NODE)->AddApplication(app);
+    
+    nodes.Get (1)->AddApplication(app);
   }
 
+  if(pcap) {
+    pointToPoint.EnablePcapAll ("grail-iperf-example");
+  }
+
+  // Packet::EnableChecking();
+  // Packet::EnablePrinting();
+  
+  Simulator::Stop( Seconds (100) );
   Simulator::Run ();
+
   Simulator::Destroy ();
 
-  return EXIT_SUCCESS;
+  return 0;
 }
