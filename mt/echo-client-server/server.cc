@@ -1,14 +1,9 @@
 #include <stdio.h>
-#include <stdlib.h>
 #include <sys/socket.h>
-#include <netinet/in.h>
 #include <string.h>
 #include <arpa/inet.h>
-#include <fcntl.h>      // for open
-#include <unistd.h>     // for close
+#include <unistd.h>     
 #include <pthread.h>
-#include <iostream>
-#include <string>
 
 char client_message[2000];
 
@@ -66,16 +61,16 @@ int main(){
     //Bind the address struct to the socket 
     bind(serverSocket, (struct sockaddr *) &serverAddr, sizeof(serverAddr));
 
-    //Listen on the socket, with 40 max connection requests queued 
-    if ( listen(serverSocket,5) == 0 )
+    if ( listen(serverSocket, 5) == 0 )
         printf("Listening\n");
     else
         printf("Error\n");
-        pthread_t tid[60];
-        int i = 0;
 
-    while(1) {
-        //Accept call creates a new socket for the incoming connection
+    pthread_t tid[9];
+    //int i = 0;
+
+    for (int i=0; i<3; i++){
+         //Accept call creates a new socket for the incoming connection
         addr_size = sizeof serverStorage;
         newSocket = accept(serverSocket, (struct sockaddr *) &serverStorage, &addr_size);
 
@@ -83,14 +78,11 @@ int main(){
         //so the main thread can entertain next request
         if( pthread_create(&tid[i], NULL, socketThread, &newSocket) != 0 )
             printf("Failed to create thread\n");
-        if( i >= 50) {
-            i = 0;
+    }
 
-            while(i < 50) {
-                pthread_join(tid[i++], NULL);
-            }
-            i = 0;
-        }
+
+    for (int i=0; i<3; i++){
+        pthread_join(tid[i], NULL);
     }
 
     return 0;
