@@ -4,13 +4,13 @@
 #include <string.h>
 #include <arpa/inet.h>
 #include <stdlib.h>
-#include <fcntl.h> // for open
+#include <fcntl.h>  // for open
 #include <unistd.h> // for close
 #include <pthread.h>
 
 
 
-void * cientThread(void *arg) {
+void * clientThread(void *arg) {
 
     printf("In thread\n");
     char message[1000];
@@ -62,7 +62,7 @@ int main(){
     pthread_t tid[51];
 
     while(i< 50) {
-        if( pthread_create(&tid[i], NULL, cientThread, NULL) != 0 )
+        if( pthread_create(&tid[i], NULL, clientThread, NULL) != 0 )
             printf("Failed to create thread\n");
         i++;
     }

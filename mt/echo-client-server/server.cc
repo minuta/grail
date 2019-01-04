@@ -4,30 +4,36 @@
 #include <netinet/in.h>
 #include <string.h>
 #include <arpa/inet.h>
-#include <fcntl.h> // for open
-#include <unistd.h> // for close
+#include <fcntl.h>      // for open
+#include <unistd.h>     // for close
 #include <pthread.h>
 
 char client_message[2000];
 char buffer[1024];
 pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 
+
 void * socketThread(void *arg) {
+
     int newSocket = *((int *)arg);
     recv(newSocket , client_message , 2000 , 0);
 
-    // Send message to the client socket 
+    printf("got client message : %s", client_message);
+
     pthread_mutex_lock(&lock);
-    char *message = malloc(sizeof(client_message)+20);
-    strcpy(message,"Hello Client : ");
-    strcat(message,client_message);
-    strcat(message,"\n");
+    char *message = (char *) malloc(sizeof(client_message)+20);
+    strcpy(message,"Hello from server : got your message! \n");
+    //strcat(message, client_message);
+    //strcat(message,"\n");
     strcpy(buffer,message);
     free(message);
     pthread_mutex_unlock(&lock);
 
     sleep(1);
-    send(newSocket,buffer,13,0);
+
+    send(newSocket, buffer, 20, 0);
+
+
     printf("Exit socketThread \n");
     close(newSocket);
     pthread_exit(NULL);
