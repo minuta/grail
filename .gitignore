@@ -6,3 +6,5 @@ tags.*
 .vscode
 client
 server
+mt-client
+simple-client
