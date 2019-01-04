@@ -1,3 +1,9 @@
+//
+// this client creates a NUMBER_OF_THREADS threads, sends hello to server and tries 
+// to receive the appropriate response from the server
+//
+// u can use commented mutex-statements to avoid race-conditions!
+//
 #include <stdio.h>
 #include <string.h>
 #include <arpa/inet.h>
@@ -9,7 +15,7 @@ const int NUMBER_OF_THREADS = 5;  // number of possible connections
 const int PORT = 7799;
 const char* IP = "127.0.0.1";
 
-pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
+//pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 
 void * clientThread(void *arg) {
 
