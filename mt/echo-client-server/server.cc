@@ -7,10 +7,12 @@
 #include <fcntl.h>      // for open
 #include <unistd.h>     // for close
 #include <pthread.h>
+#include <iostream>
+#include <string>
 
 char client_message[2000];
-char buffer[1024];
-pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
+
+//pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 
 
 void * socketThread(void *arg) {
@@ -20,21 +22,18 @@ void * socketThread(void *arg) {
 
     printf("got client message : %s", client_message);
 
-    pthread_mutex_lock(&lock);
-    char *message = (char *) malloc(sizeof(client_message)+20);
-    strcpy(message,"Hello from server : got your message! \n");
-    //strcat(message, client_message);
-    //strcat(message,"\n");
-    strcpy(buffer,message);
-    free(message);
-    pthread_mutex_unlock(&lock);
+
+    //pthread_mutex_lock(&lock);
+    //pthread_mutex_unlock(&lock);
 
     sleep(1);
 
-    send(newSocket, buffer, 20, 0);
+    char const * message = "Hello from server : got your message!";
+
+    send(newSocket, message, strlen(message), 0);
 
 
-    printf("Exit socketThread \n");
+    printf("Exit thread and its spawned thread \n");
     close(newSocket);
     pthread_exit(NULL);
 }
@@ -68,7 +67,7 @@ int main(){
     bind(serverSocket, (struct sockaddr *) &serverAddr, sizeof(serverAddr));
 
     //Listen on the socket, with 40 max connection requests queued 
-    if(listen(serverSocket,50)==0)
+    if ( listen(serverSocket,5) == 0 )
         printf("Listening\n");
     else
         printf("Error\n");
@@ -88,7 +87,7 @@ int main(){
             i = 0;
 
             while(i < 50) {
-                pthread_join(tid[i++],NULL);
+                pthread_join(tid[i++], NULL);
             }
             i = 0;
         }
