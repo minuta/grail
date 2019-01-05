@@ -1,7 +1,7 @@
 /*
  * test: 
  *       - testing multiple threads : main thread and three additional threads
- *       - testing execution of multiple statements in the thread-function
+ *       - testing execution of multiple statements in the thread-function : see NUM_OF_LOOPS_IN_THREAD
  *       - add sleep in thread-function
  * 
  *

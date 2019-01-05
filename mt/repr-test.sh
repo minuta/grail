@@ -12,7 +12,7 @@
 OK_MSG="tput setaf 10; echo ' Success!'; tput sgr 0"
 FAILED_MSG="tput setaf 9; echo ' FAILED!'; tput sgr 0"
 #OK_MSG="tput setaf 2; echo "OK"; tput sgr 0"
-MSG="capturing iteration in :"
+#MSG="capturing iteration in :"
 CAPTURE_FILE_1=repr-capture1
 CAPTURE_FILE_2=repr-capture2
 TEST_SCRIPT=$1
@@ -37,7 +37,7 @@ echo
 
 while [ "$i" -le "$NUM_OF_ITERATIONS" ]; do
     echo Running iteration "$i" ---------------------------
-    i=$(($i + 1))
+    #i=$(($i + 1))
 
     echo - capturing stdout for the first execution && LD_LIBRARY_PATH=build:../../../build/lib ../../../build/src/grail/mt/ns3-dev-runner-debug --app=./$TEST_SCRIPT > $CAPTURE_FILE_1 || eval $FAILED_MSG 
     echo - capturing stdout for the second execution && LD_LIBRARY_PATH=build:../../../build/lib ../../../build/src/grail/mt/ns3-dev-runner-debug --app=./$TEST_SCRIPT > $CAPTURE_FILE_2 || eval $FAILED_MSG

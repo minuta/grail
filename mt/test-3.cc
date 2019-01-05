@@ -6,6 +6,12 @@
  *
  * this program creates some threads and prints thread IDs to STDOUT
  * in particular it triggers the system call clone
+ *
+ *
+ * TODO: make an additional test which has the same code as this test, but does mutex-locking of the code:
+ *          auto msg = "------> THREAD #" + std::to_string(long(threadId)) + ": hello " + std::to_string(i) + "\n";
+ *          std::cout << msg;
+ *
  */
 
 #include <iostream>
