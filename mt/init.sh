@@ -13,6 +13,8 @@ FILE_4=test-2.cc
 FILE_5=test-3.cc
 FILE_6=test-4.cc
 
+FILE_7=runner-3.cc
+
 echo -n "---> changing to NS-3 root folder: "
 cd ../../../ && eval $OK_MSG
 
@@ -25,6 +27,9 @@ cd scratch && eval $OK_MSG
 echo -n "---> creating sym link for runner.cc : "
 ln -sf ../$MULTI_THREADING_DIR/$FILE_2 $FILE_2 && eval $OK_MSG
 
+
+echo -n "---> creating sym link for runner-3.cc : "
+ln -sf ../$MULTI_THREADING_DIR/$FILE_7 $FILE_7 && eval $OK_MSG
 
 # ------------------- TEST CASES ---------------------------------
 
