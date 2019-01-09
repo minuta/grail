@@ -3,16 +3,17 @@
 // after the NUMBER_OF_THREADS connections server terminates
 //
 #include <stdio.h>
-//#include <sys/socket.h>
 #include <string.h>
 #include <arpa/inet.h>
 #include <unistd.h>     
 #include <pthread.h>
 
 char client_message[2000];
-const int NUMBER_OF_THREADS = 5;  // number of possible connections
+const int NUMBER_OF_THREADS = 5;    // number of possible connections
+const int BACKLOG = 10;             // max size for the queue of pending connections
 const int PORT = 7799;
 const char* IP = "127.0.0.1";
+const char * message = "Hello from server : got your message!";
 
 //pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 
@@ -24,16 +25,12 @@ void * socketThread(void *arg) {
 
     printf("got client message : %s", client_message);
 
-
     //pthread_mutex_lock(&lock);
     //pthread_mutex_unlock(&lock);
 
     sleep(1);
 
-    char const * message = "Hello from server : got your message!";
-
     send(newSocket, message, strlen(message), 0);
-
 
     printf("Close socket and thread \n");
     close(newSocket);
@@ -62,15 +59,17 @@ int main(){
 
     bind(serverSocket, (struct sockaddr *) &serverAddr, sizeof(serverAddr));
 
-    if ( listen(serverSocket, 5) == 0 )
+    if ( listen(serverSocket, BACKLOG) == 0 )
         printf("Listening... \n");
     else
-        printf("Error while trying to listen to a socket! \n");
+        printf("Error while trying to listen on a socket! \n");
 
     pthread_t tid[NUMBER_OF_THREADS];
 
+
     for (int i=0; i<NUMBER_OF_THREADS; i++){
-         //Accept call creates a new socket for the incoming connection
+   
+        // accept call creates a new socket for the incoming connection
         addr_size = sizeof serverStorage;
         newSocket = accept(serverSocket, (struct sockaddr *) &serverStorage, &addr_size);
 
