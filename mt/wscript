@@ -8,8 +8,8 @@ def build(bld):
     obj = bld.create_ns3_program('runner-2', ['grail', 'flow-monitor', 'applications'])
     obj.source = 'runner-2.cc'
 
-    obj = bld.create_ns3_program('runner-3', ['grail', 'flow-monitor', 'applications'])
-    obj.source = 'runner-3.cc'
+    #obj = bld.create_ns3_program('runner-3', ['grail', 'flow-monitor', 'applications'])
+    #obj.source = 'runner-3.cc'
 
     obj = bld.create_ns3_program('runner-4', ['grail', 'flow-monitor', 'applications'])
     obj.source = 'runner-4.cc'
