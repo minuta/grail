@@ -8,7 +8,8 @@
 
 
 const int PORT = 7799;
-const char* IP = "127.0.0.1";
+//const char * IP = "127.0.0.1";
+const char * IP = "10.0.1.1";
 
 
 int main(){
