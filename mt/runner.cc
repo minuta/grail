@@ -1,15 +1,10 @@
-/* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
-
 /*
-NS-3 script to test Grail for working with a simple multithreaded application
-
-Configuration:
-    - 2 nodes with a PPP connection
-    - on one node is running a multithreaded application
-    - multithreaded application has a single purpose: printing some data to STDOUT (e.g. thread id)
-
-    - it's possible to define application to run in the script via a cmd argument, see --PrintHelp
-    - default value is a test application from the scratch dir
+ * NS-3 script to test Grail for working with a simple multithreaded application
+ *
+ * Configuration:
+ *
+ *      - 2 nodes with a PPP connection
+ *      - you can define application (to run on the node) via a cmd argument, see --PrintHelp
 */
 
 #include "ns3/grail.h"
@@ -37,13 +32,15 @@ int main (int argc, char *argv[])
   cmd.AddValue("app", CMD_ARG_APP_HELP_STD, appToRun);
   cmd.Parse (argc, argv);
   
-  if (appToRun.empty()){
-    std::cout << "Error: didn't get a binary to run in the runner." << std::endl;
-    std::cout << "Usage : runner --app=<path to binary executable>" << std::endl;
-    std::cout << "Example : ./waf --run \"runner --app=src/grail/mt/test-3\"" << std::endl;
+  // if (appToRun.empty()){
+  //   std::cout << "Error: didn't get a binary to run in the runner." << std::endl;
+  //   std::cout << "Usage : runner --app=<path to binary executable>" << std::endl;
+  //   std::cout << "Example : ./waf --run \"runner --app=src/grail/mt/test-3\"" << std::endl;
 
-    return EXIT_FAILURE;
-  }
+  //   return EXIT_FAILURE;
+  // }
+
+  appToRun = "/home/qp/Projects/ns-3.29/src/grail/mt/test-3";   // used for debugging
 
   Time::SetResolution (Time::NS);
 
