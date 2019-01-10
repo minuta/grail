@@ -136,8 +136,15 @@ struct GrailApplication::Priv
   std::set<int> m_nonblocking_sockets;
   std::set<int> m_random_fds;
   std::map<int,std::shared_ptr<NetlinkSocket> > m_netlinks;
-  int socket_fd_count = 100;
-  
+  std::set<int> availableFDs;
+
+  int GetNextFD() {
+    NS_ASSERT(availableFDs.begin() != availableFDs.end() && "Out of file descriptors!");
+    int fd = *availableFDs.begin();
+    availableFDs.erase(fd);
+    return fd;
+  }
+
   // used for alarm(2)
   EventId alarmEvent;
   Time    alarmTime;
@@ -229,7 +236,6 @@ struct GrailApplication::Priv
 
       // definitely needs re-implementation (later on):
     case SYS_uname:  // tor uses this for node name guessing, should be user specifiable
-    case SYS_openat: // in.tftpd uses this file/directory access
       
       res = HandleSyscallAfter();
       break;
@@ -252,6 +258,9 @@ struct GrailApplication::Priv
       break;
     case SYS_open:
       res = HandleOpen();
+      break;
+    case SYS_openat: // in.tftpd uses this file/directory access
+      res = HandleOpenAt();
       break;
     case SYS_close:
       res = HandleClose();
@@ -633,7 +642,16 @@ struct GrailApplication::Priv
     } else if(m_sockets.find(fd) != m_sockets.end()) {
       Ptr<Socket> sock = m_sockets.at(fd);
       sock->Close();
+
+      // remove from all socket state sets
       m_sockets.erase(fd);
+      m_tcpSockets.erase(fd);
+      m_connectedSockets.erase(fd);
+      m_isListenTcpSocket.erase(fd);
+      m_nonblocking_sockets.erase(fd);
+      
+      availableFDs.insert(fd);
+      
       // we must delay the deletion of the socket, since the DataSent callback may fail otherwise
       // the constant delay of one second likely has a large safety margin
       std::function<void()> removeClosedSocket = [sock]()
@@ -646,10 +664,12 @@ struct GrailApplication::Priv
       return SYSC_SUCCESS;
     } else if(m_netlinks.find(fd) != m_netlinks.end()) {
       m_netlinks.erase(fd);
+      availableFDs.insert(fd);
       FAKE(0);
       return SYSC_SUCCESS;
     } else if(m_random_fds.find(fd) != m_random_fds.end()) {
       m_random_fds.erase(fd);
+      availableFDs.insert(fd);
       FAKE(0);
       return SYSC_SUCCESS;
     } else {
@@ -668,12 +688,12 @@ struct GrailApplication::Priv
     char mypathname[256];
     MemcpyFromTracee(pid, mypathname, pathname, sizeof(mypathname));
 
-    // fprintf(stderr,"open path: %s\n", mypathname);
-    std::regex random_regex("^/dev/random");
-    std::regex urandom_regex("^/dev/urandom");
+    std::regex random_regex("dev/random");
+    std::regex urandom_regex("dev/urandom");
+    NS_LOG_LOGIC(pid << ": (" << Simulator::Now().GetSeconds() << "s) [open] path: " << mypathname);
     if(std::regex_search(mypathname, random_regex)
        || std::regex_search(mypathname, urandom_regex)) {
-      int new_socket_fd = socket_fd_count++;
+      int new_socket_fd = GetNextFD();
       m_random_fds.insert(new_socket_fd);
       FAKE(new_socket_fd);
       return SYSC_SUCCESS;
@@ -682,6 +702,31 @@ struct GrailApplication::Priv
     }
   }
 
+
+  // int openat(int dirfd, const char *pathname, int flags);
+  // int openat(int dirfd, const char *pathname, int flags, mode_t mode);
+  SyscallHandlerStatusCode HandleOpenAt() {
+    char *dirfd;
+    char *pathname;
+    int flags;
+    read_args(pid, dirfd, pathname, flags);
+    char mypathname[256];
+    MemcpyFromTracee(pid, mypathname, pathname, sizeof(mypathname));
+
+    std::regex random_regex("dev/random");
+    std::regex urandom_regex("dev/urandom");
+    NS_LOG_LOGIC(pid << ": (" << Simulator::Now().GetSeconds() << "s) [openat] path: " << mypathname);
+    if(std::regex_search(mypathname, random_regex)
+       || std::regex_search(mypathname, urandom_regex)) {
+      int new_socket_fd = GetNextFD();
+      m_random_fds.insert(new_socket_fd);
+      FAKE(new_socket_fd);
+      return SYSC_SUCCESS;
+    } else {
+      return HandleSyscallAfter();
+    }
+  }
+  
   // int fcntl(int fd, int cmd, ... /* arg */ );
   SyscallHandlerStatusCode HandleFcntl() {
     int fd;
@@ -1029,17 +1074,17 @@ struct GrailApplication::Priv
       if(type == SOCK_DGRAM) {
         TypeId tid = TypeId::LookupByName ("ns3::UdpSocketFactory");
         Ptr<Socket> socket = Socket::CreateSocket (app->GetNode (), tid);
-        m_sockets[socket_fd_count] = socket;
-        new_socket_fd = socket_fd_count++;
+        new_socket_fd = GetNextFD();
+        m_sockets[new_socket_fd] = socket;
         FAKE(new_socket_fd);
         return SYSC_SUCCESS;
       }
       if(type == SOCK_STREAM) {
         TypeId tid = TypeId::LookupByName ("ns3::TcpSocketFactory");
         Ptr<Socket> socket = Socket::CreateSocket (app->GetNode (), tid);
-        m_sockets[socket_fd_count] = socket;
-        m_tcpSockets.insert(socket_fd_count);
-        new_socket_fd = socket_fd_count++;
+        new_socket_fd = GetNextFD();
+        m_sockets[new_socket_fd] = socket;
+        m_tcpSockets.insert(new_socket_fd);
         FAKE(new_socket_fd);
         return SYSC_SUCCESS;
       }
@@ -1055,7 +1100,7 @@ struct GrailApplication::Priv
       }
       
       if(protocol == NETLINK_ROUTE) {
-        int new_socket_fd = socket_fd_count++;
+        int new_socket_fd = GetNextFD();
         m_netlinks[new_socket_fd] = std::make_shared<NetlinkSocket>(pid,NETLINK_ROUTE,app,rt);
         FAKE(new_socket_fd);
         return SYSC_SUCCESS;
@@ -1848,7 +1893,7 @@ struct GrailApplication::Priv
       m_fakeAcceptedSockets.erase(sockfd);
       SetBsdAddress(ns3Addr, addr, addrlen);
 
-      int new_socket_fd = socket_fd_count++;
+      int new_socket_fd = GetNextFD();
       m_sockets[new_socket_fd] = ns3Sock;
       m_tcpSockets.insert(new_socket_fd);
       m_connectedSockets.insert(new_socket_fd);
@@ -2191,6 +2236,11 @@ GrailApplication::GrailApplication ()
   p->rng->SetAttribute("Min", DoubleValue(0.0));
   p->rng->SetAttribute("Max", DoubleValue(255.0));
   p->egid = p->gid = p->euid = p->uid = 0; // root
+
+#define MAX_NUM_FDS 100
+  for (int i=100; i<100+MAX_NUM_FDS; i++) {
+    p->availableFDs.insert(i);
+  }
 
   // finally, set fake pid. not that this is
   static int global_process_pids = 0;
