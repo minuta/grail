@@ -30,26 +30,28 @@ int main(){
     
     addr_size = sizeof serverAddr;
 
-    printf("connecting to server...\n");
+    printf("Client: connecting to server...\n");
     int connection_status = connect(clientSocket, (struct sockaddr *) &serverAddr, addr_size);
 
     if (connection_status!=0){
-        printf("Error: connection failed, status-code: %d", connection_status);
+        printf("Client: error: connection failed, status-code: %d", connection_status);
     }
     
     strcpy (message, "hello from client \n");
 
     if( send(clientSocket , message , strlen(message) , 0) < 0) {
-            printf("Error: send failed! \n");
+            printf("Client: error: send failed! \n");
     }
 
     if(recv(clientSocket, buffer, 1024, 0) ) {
-        printf("Data received: %s\n", buffer);
+        printf("Client: data received: %s\n", buffer);
     } else {
-        printf("Error: receive failed! \n");
+        printf("Client: error: receive failed! \n");
     }
 
     close(clientSocket);
     
+    printf("Client: terminating...\n");
+
     return 0;
 }
