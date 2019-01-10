@@ -1,4 +1,7 @@
-/* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
+/*
+ * runner for testing iperf2 client-server
+ *
+ */
 
 #include "ns3/grail-module.h"
 #include "ns3/traffic-control-module.h"
