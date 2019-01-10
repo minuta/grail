@@ -9,16 +9,17 @@
 #include <pthread.h>
 
 char client_message[2000];
-const int NUMBER_OF_THREADS = 5;    // number of possible connections
+const int NUMBER_OF_THREADS = 1;    // number of possible connections
 const int BACKLOG = 10;             // max size for the queue of pending connections
 const int PORT = 7799;
-const char* IP = "127.0.0.1";
-const char * message = "Hello from server : got your message!";
+//const char* IP = "127.0.0.1";
+const char *IP = "10.0.1.1";
+const char *message = "Hello from server : got your message!";
 
 //pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 
 
-void * socketThread(void *arg) {
+void *socketThread(void *arg) {
 
     int newSocket = *((int *)arg);
     recv(newSocket , client_message , 2000 , 0);
@@ -27,8 +28,6 @@ void * socketThread(void *arg) {
 
     //pthread_mutex_lock(&lock);
     //pthread_mutex_unlock(&lock);
-
-    sleep(1);
 
     send(newSocket, message, strlen(message), 0);
 
@@ -66,13 +65,17 @@ int main(){
 
     pthread_t tid[NUMBER_OF_THREADS];
 
+    sleep(10);
 
     for (int i=0; i<NUMBER_OF_THREADS; i++){
    
         // accept call creates a new socket for the incoming connection
         addr_size = sizeof serverStorage;
-        newSocket = accept(serverSocket, (struct sockaddr *) &serverStorage, &addr_size);
 
+        printf("before accept \n");
+        newSocket = accept(serverSocket, (struct sockaddr *) &serverStorage, &addr_size);
+        printf("after accept \n");
+        
         //for each client request creates a thread and assign the client request to it to process
         //so the main thread can entertain next request
         if ( pthread_create(&tid[i], NULL, socketThread, &newSocket) != 0 )
