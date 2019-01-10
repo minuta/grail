@@ -13,11 +13,12 @@
 
 const int NUMBER_OF_THREADS = 5;  // number of possible connections
 const int PORT = 7799;
-const char* IP = "127.0.0.1";
+//const char *IP = "127.0.0.1";
+const char *IP = "10.0.1.1";
 
 //pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 
-void * clientThread(void *arg) {
+void *clientThread(void *arg) {
 
     char message[1000];
     char buffer[1024];
