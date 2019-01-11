@@ -16,8 +16,8 @@
 #include <stdlib.h>
 
 
-const char *IP = "127.0.0.1";
-//const char *IP = "10.0.1.1";
+//const char *IP = "127.0.0.1";
+const char *IP = "10.0.1.1";
 const char *PORT = "7799";
 
 int main(){

@@ -32,8 +32,8 @@ using namespace ns3;
 
 int main (int argc, char *argv[]){
 
-    std::string server = "/home/qp/Projects/ns-3.29/src/grail/mt/client-server/server";
-    std::string client = "/home/qp/Projects/ns-3.29/src/grail/mt/client-server/new-simple-client";
+    std::string server = "/home/qp/Projects/ns-3.29/src/grail/mt/client-server/new-server.o";
+    std::string client = "/home/qp/Projects/ns-3.29/src/grail/mt/client-server/new-simple-client.o";
 
 
     LogComponentEnable("GrailApplication", LOG_LEVEL_ERROR);
