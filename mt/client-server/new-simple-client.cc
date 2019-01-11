@@ -2,7 +2,7 @@
  *  this client sends hello to server and tries to receive a response from server
  *
  *  simple, one threaded client
- *  approvements to simple-client:
+ *  improvements compared to simple-client.cc:
  *  - getaddrinfo
  *  - perror 
  *
@@ -16,8 +16,8 @@
 #include <stdlib.h>
 
 
-//const char *IP = "127.0.0.1";
-const char *IP = "10.0.1.1";
+const char *IP = "127.0.0.1";
+//const char *IP = "10.0.1.1";
 const char *PORT = "7799";
 
 int main(){
@@ -44,7 +44,7 @@ int main(){
     if (connect(clientSocket, res->ai_addr, res->ai_addrlen)!=0)
         perror("Client: error: connection failed, status-code");
     
-    strcpy (message, "MSG: hello from client \n");
+    strcpy (message, "MSG: hello from client");
 
     if( send(clientSocket , message , strlen(message) , 0) < 0)
         perror("Client: error: send failed!");

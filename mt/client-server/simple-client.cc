@@ -1,6 +1,7 @@
-//
-// this client sends hello to server and tries to receive a response from server
-//
+/*
+ *  this client sends hello to server and tries to receive a response from server
+ *
+ */
 #include <stdio.h>
 #include <string.h>
 #include <arpa/inet.h>
