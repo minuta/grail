@@ -1,5 +1,5 @@
 /*
- * runner for testing iperf2 client-server
+ * runner for testing self-implemented client-server
  *
  */
 
@@ -33,7 +33,7 @@ using namespace ns3;
 int main (int argc, char *argv[]){
 
     std::string server = "/home/qp/Projects/ns-3.29/src/grail/mt/client-server/server";
-    std::string client = "/home/qp/Projects/ns-3.29/src/grail/mt/client-server/simple-client";
+    std::string client = "/home/qp/Projects/ns-3.29/src/grail/mt/client-server/new-simple-client";
 
 
     LogComponentEnable("GrailApplication", LOG_LEVEL_ERROR);
