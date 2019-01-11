@@ -24,8 +24,10 @@ pthread_t tid[NUMBER_OF_THREADS];
 
 const int BACKLOG = 10;             // max size for the queue of pending connections
 const char *PORT = "7799";
+
 //const char* IP = "127.0.0.1";
 const char *IP = "10.0.1.1";
+
 const char *message = "MSG(server): got your message!";
 
 //pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
@@ -71,6 +73,7 @@ int main(){
 
     serverSocket = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
     bind(serverSocket, res->ai_addr, res->ai_addrlen);
+    freeaddrinfo(res);
 
     if ( listen(serverSocket, BACKLOG) == 0 )
         printf("Server: Listening at %s:%s... \n", IP, PORT);
