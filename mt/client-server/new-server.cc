@@ -1,5 +1,5 @@
 /*
- * this server creates a thread for each incoming connection
+ * this server creates a thread for each incoming connection (TCP)
  * after the NUMBER_OF_THREADS connections server terminates
  *
  *  improvements compared to server.cc:
@@ -17,7 +17,7 @@
 #include <sys/socket.h>
 #include <netdb.h>
 
-char client_message[2000];
+char client_message[1024];
 
 const int NUMBER_OF_THREADS = 1;    // number of possible connections
 pthread_t tid[NUMBER_OF_THREADS];
@@ -34,15 +34,19 @@ const char *message = "MSG(server): got your message!";
 void *socketThread(void *arg) {
 
     int newSocket = *((int *)arg);
-    recv(newSocket , client_message , 2000 , 0);
 
-    printf("Server: got client message : %s \n", client_message);
-
+    if(recv(newSocket, client_message, 1024, 0) )
+        printf("Server: data received: %s\n", client_message);
+    else
+        perror("Server: error: receive failed!");
+   
     //pthread_mutex_lock(&lock);
     //pthread_mutex_unlock(&lock);
 
     printf("Server: sending response to client: %s\n", message);
-    send(newSocket, message, strlen(message), 0);
+    if( send(newSocket , message , strlen(message) , 0) < 0)
+        perror("Server: error: send failed!");
+    
 
     printf("Server: closing socket and thread \n");
     close(newSocket);
