@@ -39,13 +39,15 @@ int main(){
 
     clientSocket = socket( res->ai_family, res->ai_socktype, res->ai_protocol );
 
-    printf("Client: connecting to server...\n");
+    printf("Client: connecting to server...%s:%s\n", IP, PORT);
 
     if (connect(clientSocket, res->ai_addr, res->ai_addrlen)!=0)
         perror("Client: error: connection failed, status-code");
     
-    strcpy (message, "MSG: hello from client");
+    strcpy (message, "MSG(client): hello from client");
 
+
+    printf("Client: sending request to server: %s\n", message);
     if( send(clientSocket , message , strlen(message) , 0) < 0)
         perror("Client: error: send failed!");
     

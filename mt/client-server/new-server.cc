@@ -26,7 +26,7 @@ const int BACKLOG = 10;             // max size for the queue of pending connect
 const char *PORT = "7799";
 const char* IP = "127.0.0.1";
 //const char *IP = "10.0.1.1";
-const char *message = "Hello from server : got your message!";
+const char *message = "MSG(server): got your message!";
 
 //pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 
@@ -41,7 +41,7 @@ void *socketThread(void *arg) {
     //pthread_mutex_lock(&lock);
     //pthread_mutex_unlock(&lock);
 
-    printf("Server: sending response to client\n");
+    printf("Server: sending response to client: %s\n", message);
     send(newSocket, message, strlen(message), 0);
 
     printf("Server: closing socket and thread \n");
