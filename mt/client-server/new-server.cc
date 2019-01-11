@@ -24,8 +24,8 @@ pthread_t tid[NUMBER_OF_THREADS];
 
 const int BACKLOG = 10;             // max size for the queue of pending connections
 const char *PORT = "7799";
-const char* IP = "127.0.0.1";
-//const char *IP = "10.0.1.1";
+//const char* IP = "127.0.0.1";
+const char *IP = "10.0.1.1";
 const char *message = "MSG(server): got your message!";
 
 //pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
@@ -61,9 +61,9 @@ int main(){
     memset(&hints, 0, sizeof hints);
     hints.ai_family = AF_UNSPEC;  // use IPv4 or IPv6, whichever
     hints.ai_socktype = SOCK_STREAM;
-    hints.ai_flags = AI_PASSIVE;     // fill in my IP for me
+    //hints.ai_flags = AI_PASSIVE;     // fill in my IP for me
 
-    getaddrinfo(NULL, PORT, &hints, &res);
+    getaddrinfo(IP, PORT, &hints, &res);
 
     serverSocket = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
     bind(serverSocket, res->ai_addr, res->ai_addrlen);
