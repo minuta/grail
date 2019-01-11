@@ -37,26 +37,31 @@ int main(){
     }
 
     clientSocket = socket( res->ai_family, res->ai_socktype, res->ai_protocol );
+    freeaddrinfo(res); 
 
     printf("Client: connecting to server...%s:%s\n", IP, PORT);
 
-    if (connect(clientSocket, res->ai_addr, res->ai_addrlen)!=0)
+    if (connect(clientSocket, res->ai_addr, res->ai_addrlen)!=0){
         perror("Client: error: connection failed, status-code");
+        exit(1);
+    }
     
     char msg[] = "MSG(client): hello from client";
 
     printf("Client: sending request to server: %s\n", msg);
-    if( send(clientSocket , msg , strlen(msg) , 0) < 0)
+    if( send(clientSocket , msg , strlen(msg) , 0) < 0){
         perror("Client: error: send failed!");
-    
+        exit(1);
+    } 
 
     if(recv(clientSocket, buffer, 1024, 0) )
         printf("Client: data received: %s\n", buffer);
-    else
+    else{
         perror("Client: error: receive failed!");
+        exit(1);
+    }
    
     close(clientSocket);
-    freeaddrinfo(res); // free the linked-list
     printf("Client: terminating...\n");
 
     return 0;
