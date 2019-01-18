@@ -1884,7 +1884,7 @@ struct GrailApplication::Priv
     NS_ASSERT(FdIsEmulatedSocket(sockfd) && m_isListenTcpSocket.count(sockfd));
     
     // todo: handle blocking question
-    // bool dont_block = m_nonblocking_sockets.count(sockfd);
+    bool dont_block = m_nonblocking_sockets.count(sockfd);
     bool already_fake_accepted = m_fakeAcceptedSockets.count(sockfd);
     
     if(already_fake_accepted) {
@@ -1901,7 +1901,29 @@ struct GrailApplication::Priv
       
       return SYSC_SUCCESS;
     } else {
-      UNSUPPORTED("non fake accepted accept call");
+      if(dont_block) {
+        FAKE(-EWOULDBLOCK);
+        return SYSC_FAILURE;
+      }
+      
+      // register accept handler
+      std::function<void(Ptr<Socket>, const Address&)> acceptCallback
+        = [this,sockfd,addr,addrlen](Ptr<Socket> ns3Sock, const  Address& ns3Addr) {
+            
+            SetBsdAddress(ns3Addr, addr, addrlen);
+            
+            int new_socket_fd = GetNextFD();
+            m_sockets[new_socket_fd] = ns3Sock;
+            m_tcpSockets.insert(new_socket_fd);
+            m_connectedSockets.insert(new_socket_fd);
+
+            SyscallHandlerStatusCode res = SYSC_SUCCESS;
+            FAKE2(new_socket_fd);
+            ProcessStatusCode(res, SYS_accept);
+          };
+      m_sockets.at(sockfd)->SetAcceptCallback(MakeNullCallback<bool,Ptr<Socket>,const Address&>(),
+                                              MakeFunctionCallback(acceptCallback));
+      return SYSC_DELAYED;
     }
   }
   
