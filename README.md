@@ -95,14 +95,14 @@ General socket APIs, netlink protocols, IO, and randomness related functionality
 
 # Module attributes
 
-The gRaIL module supports a number of attributes settable individually for each protocol instance, which you may find useful.
-For a complete list, consult `module/grail.cc`.
-The most current attributes are:
+The gRaIL module supports a number of attributes that may be set individually for each protocol instance.
+For an full list, consult `module/grail.cc`. The examples in the `examples` directory show how to set attributes.
+At the time of writing, the gRaIL attributes are:
 
  - `PrintStdout` (`bool`, default `false`): Print the protocol process's stdout and stderr messages to stdout. Mainly useful for debugging.
- - `MayQuit` (`bool`, default: `false`): If `false`, consider it an error if the protocol's process terminates. Should be set `false` on server side protocol processes which are not supposed to terminate and `true` on clients that may terminate.
- - `PollLoopDetection` (`bool`, default: `true`): A feature that massively increases performance if the protocol contains poll loop. Not yet documented or evaluated in any paper, so you may want to disable it for publications.
- - `EnableRouting` (`bool`, default: `true`): The protocol process may modify Linux routing tables via, e.g., netlink kernel subsystems. If you want to disallow this, set the attribute to `false`.
+ - `MayQuit` (`bool`, default: `false`): If `false`, report an error if the protocol's process terminates. Should be set `false` on server side protocol processes which are not supposed to terminate and to `true` on clients that may terminate.
+ - `PollLoopDetection` (`bool`, default: `true`): A feature that massively increases performance via a heuristic if the protocol contains poll loop. Not yet documented or evaluated in any paper, so you may want to disable it for publications.
+ - `EnableRouting` (`bool`, default: `true`): The protocol process may modify the simulated node's routing tables via, e.g., netlink kernel subsystems. If you want to disallow this, set the attribute to `false`.
  - `SyscallProcessingTime` (`ns3::Time`, default: `0s`): The system call processing time. If you want to be in sync with the paper, set it to `100ns`. Setting it to `0s` can avoid possible perfect-repeatability limitations arising from protocol-process-introduced differences in the file system between repeated simulation runs. If you disable the `PollLoopDetection`, consider setting `SyscallProcessingTime` to `100ns` if you encounter hangs due to poll loop behavior in emulated protocols.
  - `EnablePreloading` (`bool`, default: `true`): Enables the `no_vdso.so` feature, may be disabled if the vDSO is disabled on the simulation system. See the section on the vDSO below for details and background information.
 
@@ -129,3 +129,50 @@ The library is built automatically along with the gRaIL module and replaces the 
 We could not observe any significant performance difference between disabling the vDSO globally and using the wrapper library, but it is possible that a future Linux kernel version extends the usage of the vDSO (althrough this has not happened since the 2.6 release of Linux/amd64).
 In this unlikely case, an update to the `no_vdso.so` library is required or simulation results may be invalid, thus our advice to disable the vDSO system wide.
 If you opt to rely on the `no_vdso.so` library, you may consult the simulation system's `vdso(7)` man page to see if any additional calls were implemented (please report an issue in this case).
+
+# Extending gRaIL
+
+Since gRaIL operates exclusively on system calls, the obvious way to start extending gRaIL is to implement a missing system call.
+The proven workflow for this is as follows:
+
+## (1) Run an unsupported protocol binary
+
+The protocol may just work.
+In this case, please report this so we can extend the list.
+
+At some point, you may encounter an error "unsupported system call: <number>".
+The number reported is the decimal identifier of the Linux/amd64 system call.
+As a first step, look up which system call has this number, e.g., via https://filippo.io/linux-syscall-table/.
+Next, extend the mapping from numeric to symbolic system call identifiers in `syscname.cc`.
+
+Re-run the unsupported protocol, the error should now report the symbolic name of this unsupported system call.
+
+## (2) Analyze the system call
+
+Look up the man page for the system call (man page section 2) and analyse the functionality of the call.
+Use the paper as a reference to assign one or more categories for subsets of the features.
+Often, it is not necessary to implement all facets of the system call, as only a small subset of features is used by protocols.
+Start with those.
+
+## (3) Provide a handler for the system call
+
+System call handling is essentially a large case statement that matches on the symbolic system call identifier.
+First, extend this list in the method `HandleSyscallBefore` in `grail.cc` with the new system call's identifier.
+If the call belongs to category I, you are done at this point and may retry running the unsupported protocol (step 1).
+
+Otherwise, implement and call a handler method for the system call, e.g, `HandleNanoSleep` for syscall `SYS_nanosleep`.
+Reading the other system call implementations will help to understand the necessary implementation work.
+Once you have implemented the system call, repeat step (1) to test its functionality and find further missing system calls.
+
+## Kernel subsystems
+
+Some larger kernel subsystems are exposed indirectly via system calls.
+E.g., socket system calls expose the netlink kernel protocol via netlink sockets, other systems are exposed via the file system.
+If the subsystem is large, consider introducing a separate class that provides an interface for the relevant system calls.
+The files `netlink.h` and `netlink.cc`, e.g., introduce the `NetlinkSocket` class that implements relevant socket-related system calls specifically for netlink sockets.
+
+## Refactoring
+
+Although individual system-calls-handler implementations are mostly small and code bloat minimized by implementing them as a method in `grail.cc`, the cumulative size of the handlers renders `grail.cc` quite large.
+The file accounts for approximately 50% of the total non comment lines of code at the time of writing, so a refactoring is a reasonable act.
+Feel free to submit a merge request if you believe you have found an improved file organization or code architecture.
