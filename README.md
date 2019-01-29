@@ -1,8 +1,8 @@
 # The discRete event protocol emulatIon vesseL (gRaIL)
 
 The gRaIL architecture allows loading binary protocol implementations into a discrete event simulator.
-This repository contains an exemplary implementation as a module for the ns-3 simulator and the Linux/amd64 platform.
-Our gRaIL implementation is in a prototype development stage, but already supports using some common network protocols/networking software.
+This repository contains an example implementation as a module for the ns-3 simulator and the Linux/amd64 platform.
+Our gRaIL implementation is in a prototype development stage, but already supports loading some common network protocols/networking software.
 If you find any bugs or, even better, make an improvement, feel free to share it as an issue or a merge request!
 
 # gRaIL in a Nutshell
@@ -92,3 +92,40 @@ As of now, we have tested the following networking software explicitly for compa
 
 You may, however, try other software.
 General socket APIs, netlink protocols, IO, and randomness related functionality is supported.
+
+# Module attributes
+
+The gRaIL module supports a number of attributes settable individually for each protocol instance, which you may find useful.
+For a complete list, consult `module/grail.cc`.
+The most current attributes are:
+
+ - `PrintStdout` (`bool`, default `false`): Print the protocol process's stdout and stderr messages to stdout. Mainly useful for debugging.
+ - `MayQuit` (`bool`, default: `false`): If `false`, consider it an error if the protocol's process terminates. Should be set `false` on server side protocol processes which are not supposed to terminate and `true` on clients that may terminate.
+ - `PollLoopDetection` (`bool`, default: `true`): A feature that massively increases performance if the protocol contains poll loop. Not yet documented or evaluated in any paper, so you may want to disable it for publications.
+ - `EnableRouting` (`bool`, default: `true`): The protocol process may modify Linux routing tables via, e.g., netlink kernel subsystems. If you want to disallow this, set the attribute to `false`.
+ - `SyscallProcessingTime` (`ns3::Time`, default: `0s`): The system call processing time. If you want to be in sync with the paper, set it to `100ns`. Setting it to `0s` can avoid possible perfect-repeatability limitations arising from protocol-process-introduced differences in the file system between repeated simulation runs. If you disable the `PollLoopDetection`, consider setting `SyscallProcessingTime` to `100ns` if you encounter hangs due to poll loop behavior in emulated protocols.
+ - `EnablePreloading` (`bool`, default: `true`): Enables the `no_vdso.so` feature, may be disabled if the vDSO is disabled on the simulation system. See the section on the vDSO below for details and background information.
+
+# Suggested: vDSO system configuration
+
+gRaIL uses the system call barrier for protocol emulation.
+On many Linux/amd64 operating systems, a dynamic object called the vDSO is loaded into each process that allows reading some I/O values without the system call barrier.
+This feature is supposed to improve performance if a process makes frequent calls of, e.g., gettimeofday, but it leaks information into a process and thus invalidates gRaIL results if not taken care of.
+We advice to disable the kernel feature system wide, but our architecture has a countermeasure implemented that will very likely work on your system if you cannot do that (see futher below).
+
+We suggest to *disable* the vDSO feature globally on your simulation system, as we could not observe any significant differences in simulation performance.
+To disable the vDOS globally, simply pass `vdso=0` as a flag to the Linux kernel upon boot.
+On Ubuntu/Debian operating systems, this is easiest accomplished by modifying `/etc/default/grub` so that it contains the following line:
+```
+GRUB_CMDLINE_LINUX="vdso=0"
+```
+After the modification, run `update-grub` once as root and reboot the simulation server.
+
+Alternatively, e.g., if you do not have root access on the simulation server, you may make use of our `no_vdso.so` library feature.
+This feature is enabled by default for gRaIL as it does not conflict with a system-wide disabled vDSO.
+
+The `no_vdso.so` library is pre-loaded at each protocol process start via the `LD_PRELOADING` environment variable.
+The library is built automatically along with the gRaIL module and replaces the four vDSO-affected system calls' glibc-wrappers to date: `gettimeofday`, `clock_gettime`, `time`, and `getcpu`.
+We could not observe any significant performance difference between disabling the vDSO globally and using the wrapper library, but it is possible that a future Linux kernel version extends the usage of the vDSO (althrough this has not happened since the 2.6 release of Linux/amd64).
+In this unlikely case, an update to the `no_vdso.so` library is required or simulation results may be invalid, thus our advice to disable the vDSO system wide.
+If you opt to rely on the `no_vdso.so` library, you may consult the simulation system's `vdso(7)` man page to see if any additional calls were implemented (please report an issue in this case).
