@@ -109,13 +109,13 @@ At the time of writing, the gRaIL attributes are:
 # Suggested: vDSO system configuration
 
 gRaIL uses the system call barrier for protocol emulation.
-On many Linux/amd64 operating systems, a dynamic object called the vDSO is loaded into each process that allows reading some I/O values without the system call barrier.
+On many Linux/amd64 operating systems, a dynamic object called the vDSO is loaded into each process and allows reading some I/O values without the system call barrier.
 This feature is supposed to improve performance if a process makes frequent calls of, e.g., gettimeofday, but it leaks information into a process and thus invalidates gRaIL results if not taken care of.
-We advice to disable the kernel feature system wide, but our architecture has a countermeasure implemented that will very likely work on your system if you cannot do that (see futher below).
+We advice to disable the kernel feature system wide, but our architecture has a countermeasure implemented that will very likely work on your system if you cannot disable vDSO (see futher below).
 
-We suggest to *disable* the vDSO feature globally on your simulation system, as we could not observe any significant differences in simulation performance.
+We suggest to disable the vDSO feature globally on your simulation system, as we could not observe any significant differences in simulation performance.
 To disable the vDOS globally, simply pass `vdso=0` as a flag to the Linux kernel upon boot.
-On Ubuntu/Debian operating systems, this is easiest accomplished by modifying `/etc/default/grub` so that it contains the following line:
+On Ubuntu/Debian operating systems, this is easiest accomplished by modifying `/etc/default/grub` so that the file contains the following line:
 ```
 GRUB_CMDLINE_LINUX="vdso=0"
 ```
@@ -140,7 +140,7 @@ The proven workflow for this is as follows:
 The protocol may just work.
 In this case, please report this so we can extend the list.
 
-At some point, you may encounter an error "unsupported system call: <number>".
+At some point, you may encounter an error "unsupported system call: \<number\>".
 The number reported is the decimal identifier of the Linux/amd64 system call.
 As a first step, look up which system call has this number, e.g., via https://filippo.io/linux-syscall-table/.
 Next, extend the mapping from numeric to symbolic system call identifiers in `syscname.cc`.
@@ -149,14 +149,14 @@ Re-run the unsupported protocol, the error should now report the symbolic name o
 
 ## (2) Analyze the system call
 
-Look up the man page for the system call (man page section 2) and analyse the functionality of the call.
-Use the paper as a reference to assign one or more categories for subsets of the features.
+Look up the man page for the system call (man page section 2) and analyze the functionality of the call.
+Consult the paper as a reference to assign one or more system call categories to subsets of the features.
 Often, it is not necessary to implement all facets of the system call, as only a small subset of features is used by protocols.
 Start with those.
 
 ## (3) Provide a handler for the system call
 
-System call handling is essentially a large case statement that matches on the symbolic system call identifier.
+System call handling is initiated by a large case statement that matches on the symbolic system call identifier.
 First, extend this list in the method `HandleSyscallBefore` in `grail.cc` with the new system call's identifier.
 If the call belongs to category I, you are done at this point and may retry running the unsupported protocol (step 1).
 
