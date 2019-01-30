@@ -80,7 +80,7 @@ int main(){
     else
         perror("Server: Error while trying to listen on a socket!");
 
-    sleep(10);
+    sleep(1);
 
     for (int i=0; i<NUMBER_OF_THREADS; i++){
    
