@@ -66,18 +66,18 @@ main (int argc, char *argv[])
   Time transientPhase = Minutes(2.5);
   Time measurePhase = Minutes(2.0);
   Time cooldownPhase = Seconds(10.0);
-  int n = 9;
+  int n = 12;
   int distance = 25;
   bool pcap = false;
   DataRate rate = DataRate("1Mbps");
   bool disc = false;
-  double radiusPerNode = 10.0; // reserve ~350 square meters area per node
+  double radiusPerNode = 15.0; // reserve ~350 square meters area per node
   double discRadius;
   bool disableUserTraffic = false;
   bool printPositions = false;
   bool printPathLength = false;
   bool printSmem = false;
-  bool enablePreloading = false;
+  bool enablePreloading = true;
   
   CommandLine cmd;
   cmd.AddValue("rngRun", "run-# of the PRNG", rngRun);
@@ -227,8 +227,10 @@ main (int argc, char *argv[])
               "DebugLevel   0\n"
               "Pollrate     0.5\n"
               "Interface    \"wlan0\" {}\n"
-              "LockFile     \"/tmp/olsr%lu.lock\"\n",
-              i);
+              "LockFile     \"/tmp/olsr%lu.lock\"\n"
+              "%s",
+              i,
+              ( olsrLq ? "" : "LinkQualityLevel        0\n"));
       if(i==0) {
         fprintf(cfg, "Hna4{10.0.2.0 255.255.255.0}");
       } else if((int)i==(int)n-1) {
