@@ -63,6 +63,8 @@ namespace ns3
         thisCallQualifies = true;
       } else if(syscall == SYS_select) {
         thisCallQualifies = true;
+      } else if(syscall == SYS_futex) {
+        thisCallQualifies = true;
       } else {
         thisCallQualifies = false;
       }
