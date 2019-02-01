@@ -1999,9 +1999,10 @@ struct GrailApplication::Priv
         return SYSC_FAILURE;
       }
       
+      pid_t saved_pid = pid;
       // register accept handler
       std::function<void(Ptr<Socket>, const Address&)> acceptCallback
-        = [this,sockfd,addr,addrlen](Ptr<Socket> ns3Sock, const  Address& ns3Addr) {
+        = [this,sockfd,addr,addrlen, saved_pid](Ptr<Socket> ns3Sock, const  Address& ns3Addr) {
             
             SetBsdAddress(ns3Addr, addr, addrlen);
             
@@ -2012,7 +2013,7 @@ struct GrailApplication::Priv
 
             SyscallHandlerStatusCode res = SYSC_SUCCESS;
             FAKE2(new_socket_fd);
-            ProcessStatusCode(res, SYS_accept);
+            ProcessStatusCode(res, SYS_accept, saved_pid);
           };
       m_sockets.at(sockfd)->SetAcceptCallback(MakeNullCallback<bool,Ptr<Socket>,const Address&>(),
                                               MakeFunctionCallback(acceptCallback));
