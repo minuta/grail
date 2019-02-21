@@ -112,7 +112,11 @@ int main (int argc, char *argv[]){
 
     // Packet::EnableChecking();
     // Packet::EnablePrinting();
-      
+
+    
+    // activate tracing of client and server. Tracing will be written into corresponding PCAP files
+    pointToPoint.EnablePcapAll("Runner");
+
     Simulator::Stop( Seconds (100) );
     Simulator::Run ();
 
