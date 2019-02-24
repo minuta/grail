@@ -12,9 +12,6 @@ from scipy import stats
 from math import sqrt
 
 
-# numbers = [110, 112, 106, 90, 96, 118, 108, 114, 107, 90, 85, 84, 113, 105, 90, 104]
-# num_of_items = 16
-
 def get_numbers_from_cmd():
     numbers = [float(arg) for arg in sys.argv[1:]]
     num_of_items = len(sys.argv)-1
