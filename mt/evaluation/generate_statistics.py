@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
 
+# This script takes a file as cmd param (table with measurements) and extend it 
+# with calculated values of mean and confidence intervals
+#
+# Usage: 
+#       <this script>.py <file with data>
 
 import sys
 import numpy as np
