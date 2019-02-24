@@ -55,7 +55,7 @@ def print_new_table(filename):
     for line in f:
         cnt+=1
         if (cnt == 1):    # ignore headline
-           print (line.strip('\n') + "Mean" + "\t\t" + "CI-Lo" + "\t\t" + "CI-Hi")
+           print (line.strip('\n') + "Mean" + "\t" + "CI-Lo" + "\t" + "CI-Hi")
            continue
         list_from_line = line.split()
         float_list = [float(i) for i in list_from_line]
@@ -67,7 +67,11 @@ def print_new_table(filename):
         confidence = stats.norm.interval(0.95, loc=mean, scale=sd/sqrt(len(numbers)))
         ci_lo, ci_hi = confidence
 
-        line += "\t" + str(np.mean(numbers)) + "\t" + str(ci_lo) + "\t" + str(ci_hi)
+        mean_rounded = round (mean, 3)
+        ci_lo_rounded = round (ci_lo, 3)
+        ci_hi_rounded = round (ci_hi, 3)
+
+        line += "\t" + str(mean_rounded) + "\t" + str(ci_lo_rounded) + "\t" + str(ci_hi_rounded)
 
         print (line)
         # print (confidence)
