@@ -19,6 +19,7 @@ def print_old_table():
     print ("-"*80)
     print ("Original data table:\n")
     for line in f:
+        line = line.strip('\n')
         print (line)
     print ("-"*80)
     f.close()
