@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 
 # This script takes a file as cmd param (table with measurements) and extend it 
-# with calculated values of mean and confidence intervals
+# with calculated values of mean and confidence intervals. The precision of 
+# calculated values can be set in print_new_table()
 #
 # Usage: 
 #       <this script>.py <file with data>
@@ -44,7 +45,7 @@ def count_mean_from_list(float_list):
     return np.mean(float_list)
 
 
-def print_new_table(filename):
+def print_new_table(filename, round_ndigits):
 
     f = open(filename, "r+")
     print ("-"*80)
@@ -67,9 +68,9 @@ def print_new_table(filename):
         confidence = stats.norm.interval(0.95, loc=mean, scale=sd/sqrt(len(numbers)))
         ci_lo, ci_hi = confidence
 
-        mean_rounded = round (mean, 3)
-        ci_lo_rounded = round (ci_lo, 3)
-        ci_hi_rounded = round (ci_hi, 3)
+        mean_rounded = round (mean, round_ndigits)
+        ci_lo_rounded = round (ci_lo, round_ndigits)
+        ci_hi_rounded = round (ci_hi, round_ndigits)
 
         line += "\t" + str(mean_rounded) + "\t" + str(ci_lo_rounded) + "\t" + str(ci_hi_rounded)
 
@@ -85,7 +86,7 @@ def main():
     filename = get_filename_from_cmd()
     print ("Calculating data from ", filename)
     print_old_table(filename)
-    print_new_table(filename)
+    print_new_table(filename, round_ndigits=3)
 
 
 if __name__== "__main__":
