@@ -12,8 +12,8 @@
 
 
 
-const int NUM_OF_THREADS {1};
-const int NUM_OF_LOOPS_IN_THREAD {10};
+const int NUM_OF_THREADS {10000};
+const int NUM_OF_LOOPS_IN_THREAD {20};
 
 unsigned long int factorial(int n)
 {
@@ -32,11 +32,12 @@ float exponential(int n, float x){
 
 
 void threadFunction(int threadId){
+    float res;
     for (int i=1; i<=NUM_OF_LOOPS_IN_THREAD; i++){
         //auto msg = "------> THREAD #" + std::to_string(long(threadId)) + ": hello " + std::to_string(i) + "\n";
         //std::cout << msg << std::endl;
-        exponential(i, 5);
-        //std::cout << exponential(i, 5) << std::endl;
+        res = exponential(i, 10);
+        //std::cout << exponential(i, 10) << std::endl;
 
     }
 }
