@@ -1,6 +1,6 @@
 /*
  * test: 
- *       - testing single-thread mode and perform a work amount similar to  perf-test.cc
+ *       - testing single-thread mode with I/O operations as main work-load
  *
  */
 

@@ -1,12 +1,6 @@
 /*
  * test: 
- *       - testing multiple threads : main thread and three additional threads
- *       - testing execution of multiple statements in the thread-function
- * 
- *
- * this program creates some threads and prints thread IDs to STDOUT
- * in particular it triggers the system call clone
- *
+ *       - testing multi-thread mode with I/O operations as main work-load
  */
 
 #include <iostream>
