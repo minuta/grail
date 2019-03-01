@@ -2,16 +2,12 @@
  * test: 
  *       - testing single-thread mode and perform some math calculations without
  *         I/O operations
- *
  */
 
 #include <iostream>
 #include <pthread.h>
-//#include <chrono>
 #include <time.h>
 #include <math.h>
-
-
 
 const int NUM_OF_THREADS {10000};
 const int NUM_OF_LOOPS_IN_THREAD {20};
