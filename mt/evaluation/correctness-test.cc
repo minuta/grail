@@ -19,13 +19,18 @@ pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 void *threadFunction(void *threadId){
     for (int i=1; i<=NUM_OF_LOOPS_IN_THREAD; i++){
-        auto msg = "------> THREAD #" + std::to_string(long(threadId)) + ": hello " + std::to_string(i) + "\n";
+        auto msg = "------> THREAD #" + std::to_string(long(threadId)) + ": loop " + std::to_string(i) + "\n";
         std::cout << msg;
+
+        pthread_mutex_lock(&mutex);
+        sharedCounter = sharedCounter + long(threadId);
+        pthread_mutex_unlock(&mutex);
+
      }
     // std::cout << "------> hello from THREAD #" << long(threadId) << std::endl;
-     pthread_mutex_lock(&mutex);
-     sharedCounter = sharedCounter + long(threadId);
-     pthread_mutex_unlock(&mutex);
+     //pthread_mutex_lock(&mutex);
+     //sharedCounter = sharedCounter + long(threadId);
+     //pthread_mutex_unlock(&mutex);
 
     pthread_exit(NULL); 
 }
