@@ -12,18 +12,20 @@ volatile int i = 0; /* i is global, so it is visible to all functions.
 /* f1 uses a spinlock to wait for i to change from 0. */
 static void *f1(void *p)
 {
+    printf("Thread 1 : has started...\n");
     while (i==0) {
         /* do nothing - just keep checking over and over */
     } 
-    printf("i's value has changed to %d.\n", i);
+    printf("Thread 1 : Busy-waiting loop is over, because condition is now true...\n");
     return NULL;
 }
 
 static void *f2(void *p)
 {
-    sleep(60);   /* sleep for 60 seconds */
-    i = 99;
-    printf("t2 has changed the value of i to %d.\n", i);
+    printf("Thread 2 : has started...\n");
+    sleep(10);   /* sleep for 10 seconds */
+    printf("Thread 2 : has changed condition for the Thread 1 to true\n");
+    i = 1;
     return NULL;
 }
 
@@ -46,6 +48,6 @@ int main()
  
     pthread_join(t1, NULL);
     pthread_join(t2, NULL);
-    puts("All pthreads finished.");
+    puts("All pthreads have finished.\n");
     return 0;
 }
