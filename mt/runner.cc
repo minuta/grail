@@ -40,7 +40,7 @@ int main (int argc, char *argv[])
   //   return EXIT_FAILURE;
   // }
 
-  appToRun = "/home/qp/Projects/ns-3.29/src/grail/mt/test-3";   // used for debugging
+  appToRun = "/home/qp/Projects/ns-3.29/src/grail/mt/evaluation/scalability-test";   // used for debugging
 
   Time::SetResolution (Time::NS);
 
