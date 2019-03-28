@@ -1,7 +1,6 @@
 /*
  * test: 
- *       - testing multiple-thread mode and perform some math calculations 
- *         without any I/O operations
+ *       - testing multiple-thread mode and perform a nanosleep() per loop-iteration
  */
 
 #include <iostream>
@@ -13,8 +12,8 @@ const int NUM_OF_THREADS {1000};
 const int NUM_OF_LOOPS_IN_THREAD {100};
 
 //#define NANO_SECOND_MULTIPLIER  1000000  // 1 millisecond = 1,000,000 Nanoseconds
-#define NANO_SECOND_MULTIPLIER  1000  // 1 microsecond = 1,000 Nanoseconds
-const long INTERVAL_MS = 1 * NANO_SECOND_MULTIPLIER;
+#define MICRO_SECOND  1000  // 1 microsecond = 1,000 Nanoseconds
+const long INTERVAL_MS = 1 * MICRO_SECOND;
 
 
 
